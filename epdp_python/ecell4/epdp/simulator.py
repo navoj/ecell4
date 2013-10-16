@@ -13,8 +13,7 @@ class NetworkRulesWrapper:
         if len(args) == 1:
             return None
         elif len(args) == 2:
-            rr = _gfrd.ReactionRule(list(args), [])
-            rr['k'] = '0.0'
+            rr = _gfrd.ReactionRuleInfo(0, 0.0, list(args), [])
             return [rr]
         else:
             raise NotImplementedError

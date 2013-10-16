@@ -19,8 +19,8 @@ class SimulatorTestCase(unittest.TestCase):
             w.world.apply_boundary((1.5, 0.5, 0.5))[0], 0.5)
 
         sp1 = ecell4.core.Species("X")
-        sp1.set_attribute("D", "1e-12")
-        sp1.set_attribute("radius", "2.5e-9")
+        sp1.set_attribute("D", "1.0")
+        sp1.set_attribute("radius", "2.5e-3")
         species_list = [sp1]
 
         w.add_molecules(sp1, 60)
