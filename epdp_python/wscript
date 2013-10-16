@@ -1,0 +1,39 @@
+#! /usr/bin/env python
+# encoding: utf-8
+
+from waflib.Tools import waf_unit_test
+from waflib import Logs
+
+import os
+import subprocess
+
+
+top = '.'
+out = 'build'
+
+pyfiles = [
+    'ecell4/epdp/__init__.py',
+    'ecell4/epdp/world.py']
+
+if 'PYTHONPATH' in os.environ:
+    os.environ['PYTHONPATH'] = os.pathsep.join([
+        '%s/ecell4/epdp' % os.getcwd(), os.environ['PYTHONPATH']])
+else:
+    os.environ['PYTHONPATH'] = '%s/ecell4/epdp' % os.getcwd()
+
+def options(opt):
+    opt.load('compiler_cxx') # XXX: DUMMY
+    opt.load('python')
+
+def configure(conf):
+    conf.load('compiler_cxx') # XXX: DUMMY
+    conf.load('python')
+    conf.check_python_headers()
+
+def build(bld):
+    bld.install_files('${PYTHONDIR}/ecell4/epdp', pyfiles)
+
+    pycmd = bld.env['PYTHON'][0]
+    retval = subprocess.Popen([pycmd, '-O', 'tests/tests.py']).wait()
+    if retval:
+        raise SystemExit(retval)
