@@ -13,11 +13,32 @@ def is_label_domain(key, subunit):
     header = "_%s__" % subunit
     return (len(key) > len(header) and key[: len(header)] == header)
 
-class Species(object):
+class AttributedObject(object):
 
     def __init__(self):
-        self.subunits = []
+        self.__attributes = {}
 
+    def attributes(self):
+        return copy.copy(self.__attributes)
+
+    def set_attribute(self, key, value):
+        if type(key) is not str or type(value) is not str:
+            raise RuntimeError, "invalid key or value given."
+
+        self.__attributes[key] = value
+
+    def get_attribute(self, key):
+        return self.__attributes[key]
+
+    def has_attribute(self, key):
+        return key in self.__attributes.keys()
+
+class Species(AttributedObject):
+
+    def __init__(self):
+        AttributedObject.__init__(self)
+
+        self.subunits = []
         self.conditions = None
 
     def num_bindings(self):
@@ -600,13 +621,9 @@ class ReactionRule(object):
             if products is None:
                 continue
 
-            if len(self.__options) > 0:
-                opt = self.check_options(reactants, products, context, corresp)
-                if opt is not None:
-                    reaction = (copy.deepcopy(reactants), products, opt)
-                    retval.append(reaction)
-            else:
-                reaction = (copy.deepcopy(reactants), products, None)
+            opt = self.check_options(reactants, products, context, corresp)
+            if opt is not None:
+                reaction = (tuple(copy.deepcopy(reactants)), products, opt)
                 retval.append(reaction)
         return retval
 
