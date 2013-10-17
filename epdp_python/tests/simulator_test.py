@@ -1,6 +1,7 @@
 import unittest
 
 import ecell4.core
+from ecell4.reaction_reader.decorator2 import create_species, create_reaction_rule
 
 import world
 import simulator
@@ -12,25 +13,29 @@ class SimulatorTestCase(unittest.TestCase):
         pass
 
     def test1(self):
+        m = world.ModelWrapper()
+        attr1 = create_species("_")
+        attr1.set_attribute("D", "1.0")
+        attr1.set_attribute("radius", "2.5e-3")
+        m.add_species_attribute(attr1)
+
         w = world.EGFRDWorld(1.0, 3)
+        w.bind_to(m)
 
         self.assertEqual(w.num_particles(), 0)
         self.assertEqual(
             w.world.apply_boundary((1.5, 0.5, 0.5))[0], 0.5)
 
         sp1 = ecell4.core.Species("X")
-        sp1.set_attribute("D", "1.0")
-        sp1.set_attribute("radius", "2.5e-3")
-        species_list = [sp1]
-
         w.add_molecules(sp1, 60)
         self.assertEqual(len(w.world.world.species), 1)
         self.assertTrue(w.has_species(sp1))
         self.assertEqual(w.num_particles(), 60)
 
-        sim = simulator.EGFRDSimulator(None, w)
+        sim = simulator.EGFRDSimulator(m, w)
 
         next_time, dt = 0.0, 0.02
+        species_list = [sp1]
 
         import sys
         import csv

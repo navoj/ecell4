@@ -6,42 +6,73 @@ import _gfrd
 import gfrdbase
 #XXX
 
+from ecell4.reaction_reader.decorator2 import create_species, create_reaction_rule
+from ecell4.reaction_reader.model import Model
 
-def add_species_type(world, st):
-    try:
-        structure = st["structure"]
-    except _gfrd.NotFound:
-        structure = "world"
 
-    world.add_species(
-        _gfrd.SpeciesInfo(
-            st.id,  float(st["D"]), float(st["radius"]),
-            structure, float(st["v"])))
-
-def create_world(m, world_size, matrix_size):
+def create_world(world_size, matrix_size):
     x = numpy.repeat(world_size * 0.5, 3)
     world_region = _gfrd.CuboidalRegion('world', _gfrd.Box(x, x))
-    # m.set_all_repulsive()
-    # world_region = m.get_structure("world")
-    # if not isinstance(world_region, _gfrd.CuboidalRegion):
-    #     raise TypeError("the world should be a CuboidalRegion")
-
     if not numpy.all(
         world_region.shape.half_extent == world_region.shape.half_extent[0]):
         raise NotImplementedError("non-cuboidal world is not supported")
 
-    # world_size = world_region.shape.half_extent[0] * 2
-
     world = _gfrd.World(world_size, matrix_size)
-
-    for st in m.species_types:
-        add_species_type(world, st)
-
-    for r in m.structures.itervalues():
-        world.add_structure(r)
-
-    # world.model = m
+    world.add_structure(world_region)
     return world
+
+class ModelWrapper(Model):
+
+    def __init__(self, *args, **kwargs):
+        Model.__init__(self, *args, **kwargs)
+
+        self.__sid_species_map = {}
+        self.__model = model.ParticleModel(1.0)
+
+    def add_species(self, sp):
+        if self.has_species(sp):
+            raise RuntimeError, "already exists [%s]." % (sp.serial())
+
+        st = model.Species(
+            sp.serial(), sp.get_attribute("D"), sp.get_attribute("radius"))
+        self.__model.add_species_type(st)
+        self.__sid_species_map[st.id] = sp
+        return st.id
+
+    def has_species(self, sp):
+        return (self.get_species_id(sp) is not None)
+
+    def num_species(self):
+        return len(self.__sid_species_map)
+
+    def get_species_id(self, sp):
+        for sid, sp2 in self.__sid_species_map.items():
+            if sp2 == sp:
+                return sid
+        else:
+            return None
+
+    def get_species(self, sid):
+        return self.__sid_species_map.get(sid)
+
+    def query_reaction_rules(self, sp1, sp2=None):
+        if sp2 is None:
+            return None
+        else:
+            rr = _gfrd.ReactionRuleInfo(0, 0.0, [sp1, sp2], [])
+            return [rr]
+
+    query_reaction_rule = query_reaction_rules
+
+    def has_species_attribute(self, sp):
+        return Model.has_species_attribute(self, create_species(sp.serial()))
+
+    def apply_species_attributes(self, sp):
+        sp1 = create_species(sp.serial())
+        Model.apply_species_attributes(self, sp1)
+
+        for key, value in sp1.attributes().items():
+            sp.set_attribute(key, value)
 
 class World:
 
@@ -53,12 +84,10 @@ class World:
         # self.model.get_species_type_by_id(sid)
         # self.structures
 
-        m = model.ParticleModel(self.world_size)
-        w = create_world(m, self.world_size, self.matrix_size)
+        self.model = ModelWrapper()
 
-        self.model = m
+        w = create_world(self.world_size, self.matrix_size)
         self.world = w
-        self.__species_id_map = {}
 
     def get_num_particles(self):
         return self.world.num_particles
@@ -109,29 +138,34 @@ class World:
         return self.world.distance(pos1, pos2)
 
     def ecell4__add_species(self, sp):
-        if self.ecell4__has_species(sp):
-            raise RuntimeError, "already exists [%s]." % (sp.serial())
+        self.model.apply_species_attributes(sp)
+        sid = self.model.add_species(sp)
 
-        st = model.Species(
-            sp.serial(), sp.get_attribute("D"), sp.get_attribute("radius"))
-        self.model.add_species_type(st)
-        add_species_type(self.world, st)
-        self.__species_id_map[sp.serial()] = st.id
+        if sp.has_attribute("structure"):
+            structure = st["structure"]
+        else:
+            structure = "world"
+
+        self.world.add_species(
+            _gfrd.SpeciesInfo(
+                sid,  float(sp.get_attribute("D")),
+                float(sp.get_attribute("radius")), structure, 0.0))
+        return sid
 
     def ecell4__has_species(self, sp):
-        return (sp.serial() in self.__species_id_map.keys())
+        return self.model.has_species(sp)
 
     def ecell4__add_molecules(self, sp, num):
         if not self.ecell4__has_species(sp):
             self.ecell4__add_species(sp)
-        sid = self.__species_id_map[sp.serial()]
+        sid = self.model.get_species_id(sp)
         gfrdbase.throw_in_particles(self.world, sid, num)
 
     def ecell4__num_particles(self, sp=None):
         if sp is None:
             return self.world.num_particles
         elif self.ecell4__has_species(sp):
-            sid = self.__species_id_map[sp.serial()]
+            sid = self.model.get_species_id(sp)
             return len(self.world.get_particle_ids(sid))
         else:
             return 0
@@ -147,6 +181,11 @@ class EGFRDWorld:
         else:
             import myrandom
             self.internal_rng = myrandom.rng
+
+    def bind_to(self, m):
+        if self.world.model.num_species() > 0:
+            raise RuntimeError
+        self.world.model = m
 
     def t(self):
         return self.t

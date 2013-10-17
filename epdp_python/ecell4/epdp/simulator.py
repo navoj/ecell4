@@ -4,27 +4,13 @@ import egfrd
 #XXX
 
 
-class NetworkRulesWrapper:
-
-    def __init__(self, m):
-        self.model = m
-
-    def query_reaction_rule(self, *args):
-        if len(args) == 1:
-            return None
-        elif len(args) == 2:
-            rr = _gfrd.ReactionRuleInfo(0, 0.0, list(args), [])
-            return [rr]
-        else:
-            raise NotImplementedError
-
 class EGFRDSimulator:
 
     def __init__(self, m, w):
         self.model = m
         self.world = w
 
-        nrw = NetworkRulesWrapper(m)
+        nrw = m
         # nrw = _gfrd.NetworkRulesWrapper(m.network_rules)
         self.sim = egfrd.EGFRDSimulator(w.world, w.internal_rng, nrw)
 
