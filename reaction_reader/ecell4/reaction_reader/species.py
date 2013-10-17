@@ -617,7 +617,11 @@ class ReactionRule(object):
 
         retval = []
         for context in contexts:
-            products, corresp = self.__generate(context, reactants)
+            if len(self.__products) > 0:
+                products, corresp = self.__generate(context, reactants)
+            else:
+                products, corresp = (), []
+
             if products is None:
                 continue
 

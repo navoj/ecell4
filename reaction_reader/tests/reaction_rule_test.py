@@ -65,6 +65,12 @@ class ReactionRuleTestCase(unittest.TestCase):
         self.assertEqual(retval[0][1][0], retval[0][1][1])
         self.assertEqual(retval[0][1][0], sp1)
 
+        rr3 = create_reaction_rule("A>~A")
+        retval = rr3.generate([sp1])
+        self.assertEqual(len(retval), 1)
+        self.assertEqual(len(retval[0]), 3)
+        self.assertEqual(len(retval[0][1]), 0)
+
     def test_matches2(self):
         sp1 = create_species("X(a=b1,c=d^1).Y(e^1)")
 
