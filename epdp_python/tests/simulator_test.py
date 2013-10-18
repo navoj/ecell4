@@ -6,6 +6,8 @@ from ecell4.reaction_reader.decorator2 import create_species, create_reaction_ru
 import world
 import simulator
 
+import math
+
 
 class SimulatorTestCase(unittest.TestCase):
 
@@ -14,13 +16,20 @@ class SimulatorTestCase(unittest.TestCase):
 
     def test1(self):
         m = world.ModelWrapper()
+
+        D, radius = "1.0", "2.5e-3"
         attr1 = create_species("_")
-        attr1.set_attribute("D", "1.0")
-        attr1.set_attribute("radius", "2.5e-3")
+        attr1.set_attribute("D", D)
+        attr1.set_attribute("radius", radius)
         m.add_species_attribute(attr1)
 
-        m.add_reaction_rule(create_reaction_rule("X+X>Y|0.4896553344263186"))
-        m.add_reaction_rule(create_reaction_rule("Y>X+X|6.0"))
+        kon, koff = 0.1, 3.0
+        kD = (4 * math.pi * (float(radius) + float(radius))
+            * (float(D) + float(D)))
+        ka = kon * kD / (kD - kon)
+        kd = ka * koff / kon
+        m.add_reaction_rule(create_reaction_rule("X+Y>Z|%e" % ka))
+        m.add_reaction_rule(create_reaction_rule("Z>X+Y|%e" % kd))
 
         w = world.EGFRDWorld(1.0, 3)
         w.bind_to(m)
@@ -30,15 +39,17 @@ class SimulatorTestCase(unittest.TestCase):
             w.world.apply_boundary((1.5, 0.5, 0.5))[0], 0.5)
 
         sp1 = ecell4.core.Species("X")
+        sp2 = ecell4.core.Species("Y")
         w.add_molecules(sp1, 60)
-        self.assertEqual(len(w.world.world.species), 1)
+        w.add_molecules(sp2, 60)
+        self.assertEqual(len(w.world.world.species), 2)
         self.assertTrue(w.has_species(sp1))
-        self.assertEqual(w.num_particles(), 60)
+        self.assertEqual(w.num_particles(), 120)
 
         sim = simulator.EGFRDSimulator(m, w)
 
         next_time, dt = 0.0, 0.02
-        species_list = [sp1]
+        species_list = [sp1, sp2]
 
         import sys
         import csv
@@ -51,7 +62,6 @@ class SimulatorTestCase(unittest.TestCase):
                 ['%.6e' % sim.t()]
                 + ['%d' % w.num_molecules(sp) for sp in species_list]
                 + ['%d' % w.num_molecules()])
-            # for i in xrange(100):
             for i in xrange(500):
                 next_time += dt
                 while sim.step(next_time):
@@ -61,7 +71,6 @@ class SimulatorTestCase(unittest.TestCase):
                     ['%.6e' % sim.t()]
                     + ['%d' % w.num_molecules(sp) for sp in species_list]
                     + ['%d' % w.num_molecules()])
-                # print list(w.world)[0][1].position
 
 
 if __name__ == "__main__":
