@@ -131,12 +131,15 @@ class Species(AttributedObject):
     def __repr__(self):
         return '<"%s">' % (str(self))
 
-    def __eq__(self, rhs):
-        if len(self.subunits) != len(rhs.subunits):
+    def __eq__(self, other):
+        if len(self.subunits) != len(other.subunits):
             # quick filtering
             return False
         else:
-            return (len(self.match(rhs)) > 0 and len(rhs.match(self)) > 0)
+            return (len(self.match(other)) > 0 and len(other.match(self)) > 0)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 class Subunit(object):
 
