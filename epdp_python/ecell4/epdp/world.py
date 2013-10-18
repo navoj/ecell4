@@ -132,17 +132,6 @@ class World:
     def has_species(self, sid):
         return sid in [sp.id for sp in self.world.species]
 
-    def add_species_to_world(self, sid, sp):
-        if sp.has_attribute("structure"):
-            structure = sp.get_attribute("structure")
-        else:
-            structure = "world"
-
-        self.world.add_species(
-            _gfrd.SpeciesInfo(
-                sid,  float(sp.get_attribute("D")),
-                float(sp.get_attribute("radius")), structure, 0.0))
-
     def get_species(self, sid):
         if not self.has_species(sid):
             sp = self.model.get_species(sid)
@@ -195,6 +184,17 @@ class World:
 
     #XXX: E-Cell4 special functions
 
+    def add_species_to_world(self, sid, sp):
+        if sp.has_attribute("structure"):
+            structure = sp.get_attribute("structure")
+        else:
+            structure = "world"
+
+        self.world.add_species(
+            _gfrd.SpeciesInfo(
+                sid,  float(sp.get_attribute("D")),
+                float(sp.get_attribute("radius")), structure, 0.0))
+
     def ecell4__add_species(self, sp):
         self.model.apply_species_attributes(sp)
         sid = self.model.add_species(sp)
@@ -218,6 +218,18 @@ class World:
             return len(self.world.get_particle_ids(sid))
         else:
             return 0
+
+    def ecell4__num_molecules(self, sp=None):
+        if sp is None:
+            sp = ecell4.core.Species("_")
+        newsp1 = create_species(sp.serial())
+        num = 0
+        for sp2 in self.world.species:
+            retval = newsp1.match(
+                create_species(self.model.get_species(sp2.id).serial()))
+            if len(retval) > 0:
+                num += len(self.world.get_particle_ids(sp2.id)) * len(retval)
+        return num
 
 class EGFRDWorld:
 
@@ -254,5 +266,6 @@ class EGFRDWorld:
     def num_particles(self, sp=None):
         return self.world.ecell4__num_particles(sp)
 
-    def num_molecules(self, *args, **kwargs):
-        return self.num_particles(*args, **kwargs)
+    def num_molecules(self, sp=None):
+        # return self.num_particles(*args, **kwargs)
+        return self.world.ecell4__num_molecules(sp)

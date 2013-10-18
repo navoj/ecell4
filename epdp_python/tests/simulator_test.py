@@ -28,8 +28,8 @@ class SimulatorTestCase(unittest.TestCase):
             * (float(D) + float(D)))
         ka = kon * kD / (kD - kon)
         kd = ka * koff / kon
-        m.add_reaction_rule(create_reaction_rule("X+Y>Z|%e" % ka))
-        m.add_reaction_rule(create_reaction_rule("Z>X+Y|%e" % kd))
+        m.add_reaction_rule(create_reaction_rule("X(bs)+Y(bs)>X(bs^1).Y(bs^1)|%e" % ka))
+        m.add_reaction_rule(create_reaction_rule("X(bs^1).Y(bs^1)>X(bs)+Y(bs)|%e" % kd))
 
         w = world.EGFRDWorld(1.0, 3)
         w.bind_to(m)
@@ -38,8 +38,8 @@ class SimulatorTestCase(unittest.TestCase):
         self.assertEqual(
             w.world.apply_boundary((1.5, 0.5, 0.5))[0], 0.5)
 
-        sp1 = ecell4.core.Species("X")
-        sp2 = ecell4.core.Species("Y")
+        sp1 = ecell4.core.Species("X(bs)")
+        sp2 = ecell4.core.Species("Y(bs)")
         w.add_molecules(sp1, 60)
         w.add_molecules(sp2, 60)
         self.assertEqual(len(w.world.world.species), 2)
@@ -49,7 +49,10 @@ class SimulatorTestCase(unittest.TestCase):
         sim = simulator.EGFRDSimulator(m, w)
 
         next_time, dt = 0.0, 0.02
-        species_list = [sp1, sp2]
+        species_list = [
+            ecell4.core.Species("X.Y"),
+            ecell4.core.Species("X(bs)"),
+            ecell4.core.Species("Y(bs)")]
 
         import sys
         import csv
@@ -60,8 +63,7 @@ class SimulatorTestCase(unittest.TestCase):
             writer.writerow(['#t'] + [sp.name() for sp in species_list])
             writer.writerow(
                 ['%.6e' % sim.t()]
-                + ['%d' % w.num_molecules(sp) for sp in species_list]
-                + ['%d' % w.num_molecules()])
+                + ['%d' % w.num_molecules(sp) for sp in species_list])
             for i in xrange(500):
                 next_time += dt
                 while sim.step(next_time):
@@ -69,8 +71,7 @@ class SimulatorTestCase(unittest.TestCase):
 
                 writer.writerow(
                     ['%.6e' % sim.t()]
-                    + ['%d' % w.num_molecules(sp) for sp in species_list]
-                    + ['%d' % w.num_molecules()])
+                    + ['%d' % w.num_molecules(sp) for sp in species_list])
 
 
 if __name__ == "__main__":
