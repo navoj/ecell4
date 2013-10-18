@@ -19,6 +19,9 @@ class SimulatorTestCase(unittest.TestCase):
         attr1.set_attribute("radius", "2.5e-3")
         m.add_species_attribute(attr1)
 
+        m.add_reaction_rule(create_reaction_rule("X+X>Y|0.4896553344263186"))
+        m.add_reaction_rule(create_reaction_rule("Y>X+X|6.0"))
+
         w = world.EGFRDWorld(1.0, 3)
         w.bind_to(m)
 
@@ -40,21 +43,25 @@ class SimulatorTestCase(unittest.TestCase):
         import sys
         import csv
 
-        writer = csv.writer(sys.stdout, delimiter='\t')
-        writer.writerow(['#t'] + [sp.name() for sp in species_list])
-        writer.writerow(
-            ['%.6e' % sim.t()]
-            + ['%d' % w.num_molecules(sp) for sp in species_list])
-        for i in xrange(5):
-        # for i in xrange(10000):
-            next_time += dt
-            while sim.step(next_time):
-                pass
-
+        with sys.stdout as fout:
+        # with open('test.out', 'w') as fout:
+            writer = csv.writer(fout, delimiter='\t')
+            writer.writerow(['#t'] + [sp.name() for sp in species_list])
             writer.writerow(
                 ['%.6e' % sim.t()]
-                + ['%d' % w.num_molecules(sp) for sp in species_list])
-            # print list(w.world)[0][1].position
+                + ['%d' % w.num_molecules(sp) for sp in species_list]
+                + ['%d' % w.num_molecules()])
+            # for i in xrange(100):
+            for i in xrange(500):
+                next_time += dt
+                while sim.step(next_time):
+                    pass
+
+                writer.writerow(
+                    ['%.6e' % sim.t()]
+                    + ['%d' % w.num_molecules(sp) for sp in species_list]
+                    + ['%d' % w.num_molecules()])
+                # print list(w.world)[0][1].position
 
 
 if __name__ == "__main__":

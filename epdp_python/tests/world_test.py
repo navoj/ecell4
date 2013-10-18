@@ -24,7 +24,7 @@ class WorldTestCase(unittest.TestCase):
         species_list = [sp1]
 
         w.add_molecules(sp1, 60)
-        self.assertEqual(len(w.world.world.species), 1)
+        self.assertEqual(len(w.world.species), 1)
         self.assertTrue(w.has_species(sp1))
         self.assertEqual(w.num_particles(), 60)
 
