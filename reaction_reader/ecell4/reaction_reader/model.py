@@ -20,9 +20,10 @@ class Model(object):
                 if tmp is not None:
                     retval.extend(tmp)
 
-                tmp = rr.generate([sp2, sp1])
-                if tmp is not None:
-                    retval.extend(tmp)
+                if sp1 != sp2: #XXX: check symmetry
+                    tmp = rr.generate([sp2, sp1])
+                    if tmp is not None:
+                        retval.extend(tmp)
         return retval
 
     def add_species_attribute(self, sp):

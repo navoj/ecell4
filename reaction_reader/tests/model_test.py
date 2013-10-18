@@ -44,12 +44,11 @@ class ModelTestCase(unittest.TestCase):
         self.assertEqual(len(m.query_reaction_rules(sp1, sp2)), 0)
 
         retval = m.query_reaction_rules(sp1, sp1)
-        self.assertEqual(len(retval), 2)
+        # self.assertEqual(len(retval), 2)
+        self.assertEqual(len(retval), 1)
         self.assertEqual(len(retval[0]), 3)
         self.assertEqual(len(retval[0][1]), 1)
         self.assertEqual(retval[0][1][0], sp2)
-
-        print retval[0]
 
         retval = m.query_reaction_rules(sp2)
         self.assertEqual(len(retval), 2)
