@@ -237,7 +237,17 @@ class SpeciesAttributesCallback(Callback):
         if sp is None:
             raise RuntimeError, "no species given [%s]" % (repr(obj))
 
-        self.bitwise_operations.append((sp, rhs))
+        # self.bitwise_operations.append((sp, rhs))
+
+        if type(rhs) is not dict:
+            raise RuntimeError, "invalid attributes given [%s]" % (repr(rhs))
+
+        for key, value in rhs.items():
+            if type(value) is not str:
+                value = str(value)
+            sp.set_attribute(key, value)
+
+        self.bitwise_operations.append(sp)
 
     def notify_comparisons(self, obj):
         raise RuntimeError, (
