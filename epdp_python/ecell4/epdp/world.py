@@ -11,17 +11,6 @@ from ecell4.reaction_reader.decorator2 import create_species, create_reaction_ru
 from ecell4.reaction_reader.model import Model
 
 
-def create_world(world_size, matrix_size):
-    x = numpy.repeat(world_size * 0.5, 3)
-    world_region = _gfrd.CuboidalRegion('world', _gfrd.Box(x, x))
-    if not numpy.all(
-        world_region.shape.half_extent == world_region.shape.half_extent[0]):
-        raise NotImplementedError("non-cuboidal world is not supported")
-
-    world = _gfrd.World(world_size, matrix_size)
-    world.add_structure(world_region)
-    return world
-
 def create_model(attrs, rules):
     m = ModelWrapper()
 
@@ -32,6 +21,21 @@ def create_model(attrs, rules):
         m.add_reaction_rule(rr)
 
     return m
+
+def create_world(world_size, matrix_size, model=None, inits=[]):
+    w = EGFRDWorld(world_size, matrix_size)
+
+    if model is not None:
+        w.bind_to(model)
+
+    for sp, num in inits:
+        sp.sort()
+        newsp = ecell4.core.Species(str(sp))
+        if model is not None:
+            model.apply_species_attributes(newsp)
+        w.add_molecules(newsp, num)
+
+    return w
 
 class ModelWrapper(Model):
 
@@ -132,8 +136,14 @@ class World:
 
         self.__model = ModelWrapper()
 
-        w = create_world(self.world_size, self.matrix_size)
-        self.world = w
+        x = numpy.repeat(world_size * 0.5, 3)
+        world_region = _gfrd.CuboidalRegion('world', _gfrd.Box(x, x))
+        if not numpy.all(
+            world_region.shape.half_extent == world_region.shape.half_extent[0]):
+            raise NotImplementedError("non-cuboidal world is not supported")
+
+        self.world = _gfrd.World(world_size, matrix_size)
+        self.world.add_structure(world_region)
 
         self.world.model = DummyModel() # just for debugging
         self.model = self.world.model

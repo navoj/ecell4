@@ -1,8 +1,56 @@
+import csv
+import numpy
+
+import ecell4.core
+
 #XXX: epdp modules
 import _gfrd
 import egfrd
 #XXX
 
+
+class TimecourseLogger:
+
+    def __init__(self, func=None):
+        self.__func = func
+        self.__cache = []
+
+    def __call__(self, *args, **kwargs):
+        if self.__func is not None:
+            self.__func(*args, **kwargs)
+
+        self.log(*args)
+
+    def log(self, *args):
+        self.__cache.append(args)
+
+    def get(self):
+        return self.__cache
+
+def run_simulation(sim, upto, dt, observables, log=None):
+    species_list = [ecell4.core.Species(name) for name in observables]
+
+    if type(log) in (file, str):
+        if type(log) is str:
+            writer = csv.writer(open(log, 'w'), delimiter='\t')
+        else:
+            writer = csv.writer(log, delimiter='\t')
+        def logfunc(t, *num_molecules):
+            writer.writerow(['%.6e' % t] + ['%d' % n for n in num_molecules])
+        writer.writerow(['#t'] + [name for name in observables])
+        logobj = TimecourseLogger(logfunc)
+    else:
+        logobj= TimecourseLogger(log)
+
+    next_time, retval = 0.0, []
+    logobj(sim.t(), *[sim.world.num_molecules(sp) for sp in species_list])
+    while sim.t() < upto:
+        next_time += dt
+        while sim.step(next_time):
+            pass
+
+        logobj(sim.t(), *[sim.world.num_molecules(sp) for sp in species_list])
+    return logobj.get()
 
 class EGFRDSimulator:
 
