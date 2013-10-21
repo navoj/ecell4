@@ -1,7 +1,6 @@
 import numpy
 
 #XXX: epdp modules
-import model
 import _gfrd
 import gfrdbase
 #XXX
@@ -43,17 +42,15 @@ class ModelWrapper(Model):
         Model.__init__(self, *args, **kwargs)
 
         self.__sid_species_map = {}
-        self.__model = model.ParticleModel(1.0) # just as an id generator
+        self.__sidgen = _gfrd.SpeciesIDGenerator(0)
 
     def add_species(self, sp):
         if self.has_species(sp):
             raise RuntimeError, "already exists [%s]." % (sp.serial())
 
-        st = model.Species(
-            sp.serial(), sp.get_attribute("D"), sp.get_attribute("radius"))
-        self.__model.add_species_type(st)
-        self.__sid_species_map[st.id] = sp
-        return st.id
+        sid = self.__sidgen()
+        self.__sid_species_map[sid] = sp
+        return sid
 
     def has_species(self, sp):
         return (self.get_species_id(sp) is not None)
@@ -123,7 +120,7 @@ class DummyModel:
         pass
 
     def get_species_type_by_id(self, sid):
-        return dict(name="dummy")
+        return dict(name=str(sid))
 
 class World:
 
