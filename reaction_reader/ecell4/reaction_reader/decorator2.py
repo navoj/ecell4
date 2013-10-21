@@ -208,7 +208,7 @@ def generate_Options2(opts):
             raise RuntimeError, "an invalid option [%s] given." % (opt)
     return retval1, retval2
 
-class SpeciesAttributesCallback(Callback):
+class SpeciesCallback(Callback):
 
     def __init__(self, *args):
         Callback.__init__(self)
@@ -237,7 +237,22 @@ class SpeciesAttributesCallback(Callback):
         if sp is None:
             raise RuntimeError, "no species given [%s]" % (repr(obj))
 
-        # self.bitwise_operations.append((sp, rhs))
+        self.bitwise_operations.append((sp, rhs))
+
+    def notify_comparisons(self, obj):
+        raise RuntimeError, (
+            'ReactionRule definitions are not allowed'
+            + ' in "%s"' % self.__class__.__name__)
+
+class SpeciesAttributesCallback(SpeciesCallback):
+
+    def __init__(self, *args):
+        SpeciesCallback.__init__(self)
+
+    def notify_bitwise_operations(self, obj):
+        SpeciesCallback.notify_bitwise_operations(self, obj)
+
+        sp, rhs = self.bitwise_operations[-1]
 
         if type(rhs) is not dict:
             raise RuntimeError, "invalid attributes given [%s]" % (repr(rhs))
@@ -247,12 +262,21 @@ class SpeciesAttributesCallback(Callback):
                 value = str(value)
             sp.set_attribute(key, value)
 
-        self.bitwise_operations.append(sp)
+        self.bitwise_operations[-1] = sp
 
-    def notify_comparisons(self, obj):
-        raise RuntimeError, (
-            'ReactionRule definitions are not allowed'
-            + ' in "species_attributes"')
+class MoleculeInitsCallback(SpeciesCallback):
+
+    def __init__(self, *args):
+        SpeciesCallback.__init__(self)
+
+    def notify_bitwise_operations(self, obj):
+        SpeciesCallback.notify_bitwise_operations(self, obj)
+
+        sp, rhs = self.bitwise_operations[-1]
+        if type(rhs) not in (int, float):
+            raise RuntimeError, (
+                "the initial value for molecules must be a number [%s]."
+                % (str(rhs)))
 
 class ReactionRulesCallback(Callback):
 
@@ -297,6 +321,7 @@ class ReactionRulesCallback(Callback):
             raise RuntimeError, 'an invalid object was given [%s]' % (repr(obj))
 
 species_attributes = functools.partial(parse_decorator, SpeciesAttributesCallback)
+molecule_inits = functools.partial(parse_decorator, MoleculeInitsCallback)
 reaction_rules = functools.partial(parse_decorator, ReactionRulesCallback)
 
 class AnyCallableGenerator(dict):
