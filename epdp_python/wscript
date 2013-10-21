@@ -13,7 +13,8 @@ out = 'build'
 
 pyfiles = [
     'ecell4/epdp/__init__.py',
-    'ecell4/epdp/world.py']
+    'ecell4/epdp/world.py',
+    'ecell4/epdp/simulator.py']
 
 if 'PYTHONPATH' in os.environ:
     os.environ['PYTHONPATH'] = os.pathsep.join([
