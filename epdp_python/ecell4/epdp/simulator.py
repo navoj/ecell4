@@ -9,6 +9,12 @@ import egfrd
 #XXX
 
 
+def create_simulator(world_size, matrix_size, attrs, rules, inits):
+    import world
+    m = world.create_model(attrs, rules)
+    w = world.create_world(world_size, matrix_size, m, inits)
+    return EGFRDSimulator(m, w)
+
 class TimecourseLogger:
 
     def __init__(self, func=None):

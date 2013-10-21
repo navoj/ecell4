@@ -5,7 +5,6 @@ from ecell4.reaction_reader.decorator2 import (
     species_attributes, reaction_rules, molecule_inits,
     create_species, create_reaction_rule)
 
-import ecell4.epdp.world as world
 import ecell4.epdp.simulator as simulator
 
 
@@ -59,11 +58,11 @@ if __name__ == "__main__":
     ka2, kd2, kf2 = 0.056 * 1e+24 / N_A, 1.73, 15.0
     tau_rel = 1e-6
 
-    m = world.create_model(
+    sim = simulator.create_simulator(
+        world_size, matrix_size,
         attrs(D, radius),
-        rules(ka1, kd1, kf1, ka2, kd2, kf2, tau_rel))
-    w = world.create_world(world_size, matrix_size, m, inits())
-    sim = simulator.EGFRDSimulator(m, w)
+        rules(ka1, kd1, kf1, ka2, kd2, kf2, tau_rel),
+        inits())
 
     import sys
     simulator.run_simulation(
