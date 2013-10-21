@@ -22,6 +22,17 @@ def create_world(world_size, matrix_size):
     world.add_structure(world_region)
     return world
 
+def create_model(attrs, rules):
+    m = ModelWrapper()
+
+    for attr in attrs:
+        m.add_species_attribute(attr)
+
+    for rr in rules:
+        m.add_reaction_rule(rr)
+
+    return m
+
 class ModelWrapper(Model):
 
     def __init__(self, *args, **kwargs):
@@ -102,6 +113,14 @@ class ModelWrapper(Model):
         for key, value in sp1.attributes().items():
             sp.set_attribute(key, value)
 
+class DummyModel:
+
+    def __init__(self):
+        pass
+
+    def get_species_type_by_id(self, sid):
+        return dict(name="dummy")
+
 class World:
 
     def __init__(self, world_size, matrix_size):
@@ -109,13 +128,15 @@ class World:
         self.matrix_size = matrix_size
 
         # self.model.network_rules
-        # self.model.get_species_type_by_id(sid)
         # self.structures
 
-        self.model = ModelWrapper()
+        self.__model = ModelWrapper()
 
         w = create_world(self.world_size, self.matrix_size)
         self.world = w
+
+        self.world.model = DummyModel() # just for debugging
+        self.model = self.world.model
 
     def get_num_particles(self):
         return self.world.num_particles
@@ -134,10 +155,10 @@ class World:
 
     def get_species(self, sid):
         if not self.has_species(sid):
-            sp = self.model.get_species(sid)
+            sp = self.__model.get_species(sid)
             if sp is None:
                 raise RuntimeError, sid
-            self.add_species_to_world(sid, sp)
+            self.ecell4__add_species_to_world(sid, sp)
 
         return self.world.get_species(sid)
 
@@ -184,7 +205,7 @@ class World:
 
     #XXX: E-Cell4 special functions
 
-    def add_species_to_world(self, sid, sp):
+    def ecell4__add_species_to_world(self, sid, sp):
         if sp.has_attribute("structure"):
             structure = sp.get_attribute("structure")
         else:
@@ -195,26 +216,31 @@ class World:
                 sid,  float(sp.get_attribute("D")),
                 float(sp.get_attribute("radius")), structure, 0.0))
 
+    def ecell4__bind_to(self, m):
+        if self.__model.num_species() > 0:
+            raise RuntimeError
+        self.__model = m
+
     def ecell4__add_species(self, sp):
-        self.model.apply_species_attributes(sp)
-        sid = self.model.add_species(sp)
-        self.add_species_to_world(sid, sp)
+        # self.__model.apply_species_attributes(sp)
+        sid = self.__model.add_species(sp)
+        self.ecell4__add_species_to_world(sid, sp)
         return sid
 
     def ecell4__has_species(self, sp):
-        return self.model.has_species(sp)
+        return self.__model.has_species(sp)
 
     def ecell4__add_molecules(self, sp, num):
         if not self.ecell4__has_species(sp):
             self.ecell4__add_species(sp)
-        sid = self.model.get_species_id(sp)
+        sid = self.__model.get_species_id(sp)
         gfrdbase.throw_in_particles(self.world, sid, num)
 
     def ecell4__num_particles(self, sp=None):
         if sp is None:
             return self.world.num_particles
         elif self.ecell4__has_species(sp):
-            sid = self.model.get_species_id(sp)
+            sid = self.__model.get_species_id(sp)
             return len(self.world.get_particle_ids(sid))
         else:
             return 0
@@ -226,7 +252,7 @@ class World:
         num = 0
         for sp2 in self.world.species:
             retval = newsp1.match(
-                create_species(self.model.get_species(sp2.id).serial()))
+                create_species(self.__model.get_species(sp2.id).serial()))
             if len(retval) > 0:
                 num += len(self.world.get_particle_ids(sp2.id)) * len(retval)
         return num
@@ -244,9 +270,7 @@ class EGFRDWorld:
             self.internal_rng = myrandom.rng
 
     def bind_to(self, m):
-        if self.world.model.num_species() > 0:
-            raise RuntimeError
-        self.world.model = m
+        self.world.ecell4__bind_to(m)
 
     def t(self):
         return self.t

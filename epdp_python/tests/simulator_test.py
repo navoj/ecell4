@@ -40,6 +40,8 @@ class SimulatorTestCase(unittest.TestCase):
 
         sp1 = ecell4.core.Species("X(bs)")
         sp2 = ecell4.core.Species("Y(bs)")
+        m.apply_species_attributes(sp1)
+        m.apply_species_attributes(sp2)
         w.add_molecules(sp1, 60)
         w.add_molecules(sp2, 60)
         self.assertEqual(len(w.world.world.species), 2)
@@ -64,7 +66,7 @@ class SimulatorTestCase(unittest.TestCase):
             writer.writerow(
                 ['%.6e' % sim.t()]
                 + ['%d' % w.num_molecules(sp) for sp in species_list])
-            for i in xrange(500):
+            for i in xrange(2):
                 next_time += dt
                 while sim.step(next_time):
                     pass
