@@ -68,4 +68,4 @@ if __name__ == "__main__":
     simulator.run_simulation(
         sim, 60.0, 0.1,
         observables=("mpk(phos=YT)", "mpk(phos=pYT)", "mpk(phos=pYpT)"),
-        log=sys.stdout)
+        log="result.dat")

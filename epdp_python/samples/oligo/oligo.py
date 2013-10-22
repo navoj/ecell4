@@ -17,11 +17,11 @@ def attrs(D, radius):
 
 @molecule_inits
 def inits():
-    A(l, r) | 120
+    A(l, r, bs=(l, r)) | 120
 
 @reaction_rules
 def rules(ka, kd):
-    A(r) + A(l) == A(r^1).A(l^1) | (ka, kd)
+    _(bs) + _(bs) == _(bs^1)._(bs^1) | (ka, kd)
 
 
 if __name__ == "__main__":
@@ -36,12 +36,13 @@ if __name__ == "__main__":
 
     import sys
 
+    # with open('oligo.dat', 'w') as fout:
     with sys.stdout as fout:
         species_set = set(sim.world.species)
         fout.write("%e, %3d, " % (sim.t(), sim.world.num_particles()))
         fout.write(", ".join([sp.name() for sp in species_set]))
         fout.write("\n")
-        while len(species_set) > 0:
+        while sim.world.num_particles() > 1:
             sim.step()
             if len(species_set) != len(sim.world.species):
                 fout.write("%e, %3d, " % (sim.t(), sim.world.num_particles()))

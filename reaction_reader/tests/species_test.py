@@ -1,4 +1,5 @@
 import unittest
+import copy
 
 import species
 from decorator2 import create_species
@@ -106,7 +107,7 @@ class SpeciesTestCase(unittest.TestCase):
         self.assertEqual(len(sp2.match(sp1)), 1)
         self.assertEqual(len(sp3.match(sp1)), 1)
         self.assertEqual(len(sp4.match(sp1)), 0)
-        self.assertEqual(len(sp5.match(sp1)), 0)
+        self.assertEqual(len(sp5.match(sp1)), 1)
 
         sp1 = create_species("X(p=u,q=u,r=p,c=(p,q,r))")
         self.assertEqual(len(create_species("X(r=u)").match(sp1)), 2)
@@ -120,7 +121,7 @@ class SpeciesTestCase(unittest.TestCase):
         self.assertEqual(sp1, sp3)
         self.assertEqual(sp2, sp3)
 
-    def test_commutativities(self):
+    def test_commutativities1(self):
         com1 = species.Commutatives()
 
         com1.set_commutative("spam", "ham")
@@ -144,6 +145,22 @@ class SpeciesTestCase(unittest.TestCase):
         com1.set_commutative("spam", "foo", "hoge")
         self.assertTrue(com1.is_commutative("spam", "eggs", "foo", "hoge"))
         self.assertTrue(com2.is_comprised(com1))
+
+    def test_commutatives2(self):
+        sp1 = create_species("A(s3,s1^1,s5=q,s2=p^2,s=(s3,s2,s1,s5,s4)).B(s^1).B(s^2)")
+        sp2 = copy.deepcopy(sp1)
+        self.assertEqual(sp1, sp2)
+        sp2.sort()
+        self.assertEqual(sp1, sp2)
+
+        sp1 = create_species(
+            "A((l,r),l^2,r,bs=[l,r]).A((l,r),l,r^1,bs=[l,r]).A((l,r),l^2,r^1,bs=[l,r])")
+        sp2 = create_species(
+            "A((l,r),l,r^2,bs=[l,r]).A((l,r),l^2,r^1,bs=[l,r]).A((l,r),l,r^1,bs=[l,r])")
+        self.assertEqual(sp1, sp2)
+        sp1.sort()
+        sp2.sort()
+        self.assertEqual(str(sp1), str(sp2))
 
 
 if __name__ == '__main__':

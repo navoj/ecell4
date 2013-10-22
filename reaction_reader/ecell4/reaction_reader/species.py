@@ -180,11 +180,20 @@ class Subunit(object):
                     ModificationStateCondition(key, mod, state))
         return conditions
 
+    def has_modification(self, mod):
+        return (mod in self.modifications.keys())
+
     def add_modification(self, mod, state="", binding=""):
         if isinstance(binding, str) and len(binding) > 1 and binding[0] == "_":
             raise RuntimeError, "A binding label [%s] not allowed" % (binding)
 
         self.modifications[mod] = (state, str(binding))
+
+    def remove_modification(self, mod):
+        if not self.has_modification(mod):
+            raise RuntimeError, "No modification named [%s] exists." % (mod)
+
+        del self.modifications[mod]
 
     def get_modifications_list(self):
         return self.modifications
@@ -218,8 +227,11 @@ class Subunit(object):
             else:
                 mods3.append("%s=%s^%s" % (mod, state, binding))
 
-        mods4 = ["%s=[%s]" % (mod, ",".join([str(elem) for elem in value]))
-                for mod, value in self.domain_classes.items()]
+        mods4 = []
+        for mod, value in self.domain_classes.items():
+            subset = [str(elem) for elem in value]
+            subset.sort()
+            mods4.append("%s=[%s]" % (mod, ",".join(subset)))
 
         mods5 = ["(%s)" % (",".join(subset))
             for subset in self.commutatives.as_sets()]
@@ -230,7 +242,7 @@ class Subunit(object):
         mods4.sort()
         mods5.sort()
 
-        labels = ",".join(itertools.chain(mods1, mods2, mods5, mods3, mods4))
+        labels = ",".join(itertools.chain(mods5, mods1, mods2, mods3, mods4))
         if labels == "":
             return self.name
         else:
@@ -741,14 +753,14 @@ class ModificationNameCondition(Condition):
 
     def generator(self, subunit):
         value = subunit.modifications.get(self.mod)
-        if value is None:
+        if self.mod in subunit.commutatives.keys():
+            return subunit.commutatives.get_commutatives(self.mod)
+        elif value is None:
             value = subunit.domain_classes.get(self.mod)
             if value is None:
                 return []
             else:
                 return list(value)
-        elif self.mod in subunit.commutatives.keys():
-            return subunit.commutatives.get_commutatives(self.mod)
         else:
             return [self.mod]
 
@@ -1164,6 +1176,48 @@ class CmpSubunit:
 
     def sort(self):
         """only available for a connected graph"""
+        def modcmp1(mod1, mod2):
+            if mod1 is None and mod2 is None:
+                return 0
+            elif mod1 is None:
+                return +1
+            elif mod2 is None:
+                return -1
+            elif mod1[0] == "" and mod2[0] != "":
+                return -1
+            elif mod1[0] != "" and mod2[0] == "":
+                return +1
+            elif mod1[1] != "" and mod2[1] == "":
+                return +1
+            elif mod1[1] == "" and mod2[1] != "":
+                return -1
+            elif mod1[0] != mod2[0]:
+                return cmp(mod1[0], mod2[0])
+            else:
+                return 0
+
+        def modcmp2(mod1, mod2):
+            retval = modcmp1(mod1, mod2)
+            if retval != 0:
+                return retval
+            elif mod1 is None and mod2 is None:
+                return 0
+            else:
+                return cmp(mod1[1], mod2[1])
+
+        for su in self.__species.subunits:
+            for subset in su.commutatives.as_sets():
+                mods = [su.modifications.get(key) for key in subset]
+                mods.sort(cmp=modcmp1)
+                subset = list(subset)
+                subset.sort()
+                for key, mod in zip(subset, mods):
+                    if mod is None:
+                        if su.has_modification(key):
+                            su.remove_modification(key)
+                    else:
+                        su.add_modification(key, *mod)
+
         self.__species.subunits.sort(cmp=self)
         self.initialize()
 
@@ -1191,6 +1245,18 @@ class CmpSubunit:
                     stride += 1
                 else:
                     su.modifications[mod] = (state, newbinding)
+
+        for su in self.__species.subunits:
+            for subset in su.commutatives.as_sets():
+                mods = [su.modifications.get(key) for key in subset]
+                mods.sort(cmp=modcmp2)
+                subset = list(subset)
+                subset.sort()
+                for key, mod in zip(subset, mods):
+                    if mod is not None and mod[1] != "":
+                        su.add_modification(key, *mod)
+                    else:
+                        pass
 
     def cmp_recurse(self, idx1, idx2, ignore):
         if idx1 == idx2:
