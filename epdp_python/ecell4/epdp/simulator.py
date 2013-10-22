@@ -1,4 +1,5 @@
 import csv
+import collections
 import numpy
 
 import ecell4.core
@@ -34,8 +35,6 @@ class TimecourseLogger:
         return self.__cache
 
 def run_simulation(sim, upto, dt, observables, log=None):
-    species_list = [ecell4.core.Species(name) for name in observables]
-
     if type(log) in (file, str):
         if type(log) is str:
             writer = csv.writer(open(log, 'w'), delimiter='\t')
@@ -43,19 +42,34 @@ def run_simulation(sim, upto, dt, observables, log=None):
             writer = csv.writer(log, delimiter='\t')
         def logfunc(t, *num_molecules):
             writer.writerow(['%.6e' % t] + ['%d' % n for n in num_molecules])
-        writer.writerow(['#t'] + [name for name in observables])
+        writer.writerow(['#t'] + [rhs for lhs, rhs in observables])
         logobj = TimecourseLogger(logfunc)
     else:
         logobj= TimecourseLogger(log)
 
     next_time, retval = 0.0, []
-    logobj(sim.t(), *[sim.world.num_molecules(sp) for sp in species_list])
+
+    species_list = []
+    for lhs, rhs in observables:
+        if isinstance(lhs, collections.Iterable):
+            for sp in lhs:
+                sp.sort()
+            species_list.append(
+                tuple([ecell4.core.Species(str(sp)) for sp in lhs]))
+        else:
+            lhs.sort()
+            species_list.append((ecell4.core.Species(str(lhs)), ))
+
+    def num_molecules(sp):
+        return sum([sim.world.num_molecules(elem) for elem in sp])
+
+    logobj(sim.t(), *[num_molecules(sp) for sp in species_list])
     while sim.t() < upto:
         next_time += dt
         while sim.step(next_time):
             pass
 
-        logobj(sim.t(), *[sim.world.num_molecules(sp) for sp in species_list])
+        logobj(sim.t(), *[num_molecules(sp) for sp in species_list])
     return logobj.get()
 
 class EGFRDSimulator:

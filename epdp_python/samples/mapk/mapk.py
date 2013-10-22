@@ -2,7 +2,7 @@ import numpy
 
 import ecell4.core
 from ecell4.reaction_reader.decorator2 import (
-    species_attributes, reaction_rules, molecule_inits,
+    species_attributes, reaction_rules, molecule_inits, observables,
     create_species, create_reaction_rule)
 
 import ecell4.epdp.simulator as simulator
@@ -16,39 +16,38 @@ def attrs(D, radius):
 
 @molecule_inits
 def inits():
-    mpk(bs, phos=YT) | 120
+    mpk(phos=YT) | 120
     kk(bs=on) | 30
     pp(bs=on) | 30
 
 @reaction_rules
 def rules(ka1, kd1, kf1, ka2, kd2, kf2, tau_rel=0.0):
-    (mpk(bs, phos=YT) + kk(bs=on)
-        == mpk(bs^1, phos=YT).kk(bs=on^1) | (ka1, kd1)
-        > mpk(bs, phos=pYT) + kk(bs=off if tau_rel > 0 else on) | kf1)
+    (mpk(phos=YT) + kk(bs=on)
+        == mpk(phos=YT^1).kk(bs=on^1) | (ka1, kd1)
+        > mpk(phos=pYT) + kk(bs=off if tau_rel > 0 else on) | kf1)
 
-    (mpk(bs, phos=pYT) + kk(bs=on)
-        == mpk(bs^1, phos=pYT).kk(bs=on^1) | (ka2, kd2)
-        > mpk(bs, phos=pYpT) + kk(bs=off if tau_rel > 0 else on) | kf2)
+    (mpk(phos=pYT) + kk(bs=on)
+        == mpk(phos=pYT^1).kk(bs=on^1) | (ka2, kd2)
+        > mpk(phos=pYpT) + kk(bs=off if tau_rel > 0 else on) | kf2)
 
-    (mpk(bs, phos=pYpT) + pp(bs=on)
-        == mpk(bs^1, phos=pYpT).pp(bs=n^1) | (ka1, kd1)
-        > mpk(bs, phos=pYT) + pp(bs=off if tau_rel > 0 else on) | kf1)
+    (mpk(phos=pYpT) + pp(bs=on)
+        == mpk(phos=pYpT^1).pp(bs=n^1) | (ka1, kd1)
+        > mpk(phos=pYT) + pp(bs=off if tau_rel > 0 else on) | kf1)
 
-    (mpk(bs, phos=pYT) + pp(bs=on)
-        == mpk(bs^1, phos=pYT).pp(bs=on^1) | (ka2, kd2)
-        > mpk(bs, phos=YT) + pp(bs=off if tau_rel > 0 else on) | kf2)
-
-    # for enz, before, after, ka, kd, kf in (
-    #     (kk, YT, pYT, ka1, kd1, kf1), (kk, pYT, pYpT, ka2, kd2, kf2),
-    #     (pp, pYpT, pYT, ka1, kd1, kf1), (pp, pYT, YT, ka2, kd2, kf2)):
-    #     (mpk(bs, phos=before) + enz(bs=on)
-    #         == mpk(bs^1, phos=before).enz(bs=on^1) | (ka, kd)
-    #         > mpk(bs, phos=after) + enz(bs=off if tau_rel > 0 else on) | kf)
+    (mpk(phos=pYT) + pp(bs=on)
+        == mpk(phos=pYT^1).pp(bs=on^1) | (ka2, kd2)
+        > mpk(phos=YT) + pp(bs=off if tau_rel > 0 else on) | kf2)
 
     if tau_rel > 0:
         krel = numpy.log(2.0) / tau_rel
         kk(bs=off) > kk(bs=on) | krel
         pp(bs=off) > pp(bs=on) | krel
+
+@observables
+def observs():
+    mpk(phos=YT) + mpk(phos=YT^_) | K
+    mpk(phos=pYT) + mpk(phos=pYT^_) | Kp
+    mpk(phos=pYpT) + mpk(phos=pYpT^_) | Kpp
 
 
 if __name__ == "__main__":
@@ -66,6 +65,7 @@ if __name__ == "__main__":
 
     import sys
     simulator.run_simulation(
-        sim, 60.0, 0.1,
-        observables=("mpk(phos=YT)", "mpk(phos=pYT)", "mpk(phos=pYpT)"),
-        log="result.dat")
+        sim, 60.0, 0.02,
+        observables=observs(),
+        log=sys.stdout)
+        # log="result.dat")
