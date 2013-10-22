@@ -101,6 +101,7 @@ class ExpBase(object):
 
     def __add__(self, rhs):
         retval = AddExp(self.__root, self, rhs)
+        self.__root.notify_binary_arithmetic_operations(retval)
         return retval
 
     def __or__(self, rhs):

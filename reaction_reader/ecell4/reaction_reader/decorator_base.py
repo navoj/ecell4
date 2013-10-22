@@ -21,6 +21,9 @@ class Callback(object):
     def notify_bitwise_operations(self, obj):
         pass
 
+    def notify_binary_arithmetic_operations(self, obj):
+        pass
+
     def notify_comparisons(self, obj):
         pass
 
