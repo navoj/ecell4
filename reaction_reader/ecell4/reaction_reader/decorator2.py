@@ -227,17 +227,17 @@ class SpeciesCallback(Callback):
 
         lhs, rhs = obj._elements()
 
-        species_list = generate_Species(lhs)
-        if len(species_list) != 1:
-            raise RuntimeError, (
-                'only a single species must be given; %d given'
-                % len(species_list))
+        species_list = [sp for sp in generate_Species(lhs) if sp is not None]
+        # if len(species_list) != 1:
+        #     raise RuntimeError, (
+        #         'only a single species must be given; %d given'
+        #         % len(species_list))
 
-        sp = species_list[0]
-        if sp is None:
+        # sp = species_list[0]
+        if len(species_list) == 0:
             raise RuntimeError, "no species given [%s]" % (repr(obj))
 
-        self.bitwise_operations.append((sp, rhs))
+        self.bitwise_operations.append((species_list, rhs))
 
     def notify_comparisons(self, obj):
         raise RuntimeError, (
@@ -252,11 +252,15 @@ class SpeciesAttributesCallback(SpeciesCallback):
     def notify_bitwise_operations(self, obj):
         SpeciesCallback.notify_bitwise_operations(self, obj)
 
-        sp, rhs = self.bitwise_operations[-1]
+        species_list, rhs = self.bitwise_operations[-1]
 
-        if type(rhs) is not dict:
+        if len(species_list) != 1:
+            raise RuntimeError, (
+                "only a species must be given [%d]." % len(species_list))
+        elif type(rhs) is not dict:
             raise RuntimeError, "invalid attributes given [%s]" % (repr(rhs))
 
+        sp = species_list[0]
         for key, value in rhs.items():
             if type(value) is not str:
                 value = str(value)
@@ -269,14 +273,42 @@ class MoleculeInitsCallback(SpeciesCallback):
     def __init__(self, *args):
         SpeciesCallback.__init__(self)
 
+        self.bitwise_operations = []
+
+    def get(self):
+        return copy.copy(self.bitwise_operations)
+
     def notify_bitwise_operations(self, obj):
         SpeciesCallback.notify_bitwise_operations(self, obj)
 
-        sp, rhs = self.bitwise_operations[-1]
-        if type(rhs) not in (int, float):
+        species_list, rhs = self.bitwise_operations[-1]
+        if len(species_list) != 1:
+            raise RuntimeError, (
+                "only a species must be given [%d]." % len(species_list))
+        elif type(rhs) not in (int, float):
             raise RuntimeError, (
                 "the initial value for molecules must be a number [%s]."
                 % (str(rhs)))
+
+        self.bitwise_operations[-1] = (species_list[0], rhs)
+
+class ObservablesCallback(SpeciesCallback):
+
+    def __init__(self, *args):
+        SpeciesCallback.__init__(self)
+
+        self.declarations = []
+
+    def get(self):
+        return copy.copy(self.declarations)
+
+    def notify_bitwise_operations(self, obj):
+        SpeciesCallback.notify_bitwise_operations(self, obj)
+
+        species_list, rhs = self.bitwise_operations.pop()
+        if not is_parseobj(rhs):
+            raise RuntimeError, "invalid declaration [%s] found." % (str(rhs))
+        self.declarations.append((species_list, str(rhs)))
 
 class ReactionRulesCallback(Callback):
 
@@ -323,6 +355,7 @@ class ReactionRulesCallback(Callback):
 species_attributes = functools.partial(parse_decorator, SpeciesAttributesCallback)
 molecule_inits = functools.partial(parse_decorator, MoleculeInitsCallback)
 reaction_rules = functools.partial(parse_decorator, ReactionRulesCallback)
+observables = functools.partial(parse_decorator, ObservablesCallback)
 
 class AnyCallableGenerator(dict):
 
