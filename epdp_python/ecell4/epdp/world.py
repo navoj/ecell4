@@ -264,6 +264,9 @@ class World:
                 num += len(self.world.get_particle_ids(sp2.id)) * len(retval)
         return num
 
+    def ecell4__get_species(self, sid):
+        return self.__model.get_species(sid)
+
 class EGFRDWorld:
 
     def __init__(self, world_size, matrix_size, rng=None):
@@ -275,6 +278,15 @@ class EGFRDWorld:
         else:
             import myrandom
             self.internal_rng = myrandom.rng
+
+    def list_species(self):
+        #XXX: use a generator instead
+        retval = []
+        for sp in self.world.species:
+            retval.append(self.world.ecell4__get_species(sp.id))
+        return retval
+
+    species = property(list_species)
 
     def bind_to(self, m):
         self.world.ecell4__bind_to(m)
