@@ -306,9 +306,11 @@ class ObservablesCallback(SpeciesCallback):
         SpeciesCallback.notify_bitwise_operations(self, obj)
 
         species_list, rhs = self.bitwise_operations.pop()
-        if not is_parseobj(rhs):
+        if is_parseobj(rhs):
+            rhs = str(rhs)
+        elif not isinstance(rhs, str):
             raise RuntimeError, "invalid declaration [%s] found." % (str(rhs))
-        self.declarations.append((species_list, str(rhs)))
+        self.declarations.append((species_list, rhs))
 
 class ReactionRulesCallback(Callback):
 

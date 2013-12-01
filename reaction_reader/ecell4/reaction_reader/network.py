@@ -127,13 +127,16 @@ def generate_NetworkModel(seeds, rules):
             rr.add_product(core.Species(str(product)))
 
         # kinetic parameter
-        for opt in r_tuple[2]:
-            if (not isinstance(opt, bool)
-                and isinstance(opt, (int, long, float, complex))):
-                rr.set_k(opt)
-                break
+        if isinstance(r_tuple[2], (int, long, float, complex)):
+            rr.set_k(r_tuple[2])
         else:
-            raise RuntimeError, "No kinetic rate is defined. [%s]" % str(r_tuple)
+            for opt in r_tuple[2]:
+                if (not isinstance(opt, bool)
+                    and isinstance(opt, (int, long, float, complex))):
+                    rr.set_k(opt)
+                    break
+            else:
+                raise RuntimeError, "No kinetic rate is defined. [%s]" % str(r_tuple)
 
         model.add_reaction_rule(rr)
 

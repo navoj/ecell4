@@ -52,6 +52,13 @@ class ModelWrapper(Model):
         self.__sid_species_map[sid] = sp
         return sid
 
+    def remove_species(self, sid):
+        """sid"""
+        if self.get_species(sid) is None:
+            raise RuntimeError, "unknown species (id=%s)" % (str(sid))
+
+        del self.__sid_species_map[sid]
+
     def has_species(self, sp):
         return (self.get_species_id(sp) is not None)
 
@@ -267,6 +274,12 @@ class World:
     def ecell4__get_species(self, sid):
         return self.__model.get_species(sid)
 
+    # optionals
+
+    def remove_species(self, sid):
+        self.__model.remove_species(sid)
+        self.world.remove_species(sid)
+
 class EGFRDWorld:
 
     def __init__(self, world_size, matrix_size, rng=None):
@@ -298,7 +311,7 @@ class EGFRDWorld:
         self.t = t
 
     def add_species(self, sp):
-        self.world.ecell4__add_species(sp)
+        return self.world.ecell4__add_species(sp)
 
     def has_species(self, sp):
         return self.world.ecell4__has_species(sp)
