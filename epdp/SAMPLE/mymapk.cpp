@@ -14,6 +14,8 @@
 
 #include <boost/format.hpp>
 
+#include <ecell4/egfrd_impl/EGFRDWorld.hpp>
+
 // epdp headers
 #include <ecell4/egfrd_impl/utils/range.hpp>
 #include <ecell4/egfrd_impl/World.hpp>
@@ -85,6 +87,7 @@ int main(int argc, char **argv)
     // Traits typedefs  
     // {{{
     typedef ::World< ::CyclicWorldTraits<Real> > world_type;
+    typedef ::EGFRDWorld< ::CyclicWorldTraits<Real> > egfrd_world_type;
     typedef EGFRDSimulator< ::EGFRDSimulatorTraitsBase<world_type> > simulator_type;
     typedef simulator_type::traits_type::network_rules_type network_rules_type;
     typedef simulator_type::multi_type multi_type;
@@ -114,9 +117,15 @@ int main(int argc, char **argv)
 
     boost::shared_ptr<cuboidal_region_type> cuboidal_region
         (new cuboidal_region_type("world", cuboidal_region_type::shape_type(pos, pos)));
-
     world->add_structure(cuboidal_region );
-    // }}}
+
+    // new egfrd 
+    boost::shared_ptr<egfrd_world_type> egfrd_world(new egfrd_world_type(world_size, matrix_size));
+    boost::shared_ptr<cuboidal_region_type> egfrd_cuboidal_region
+        (new cuboidal_region_type("world", cuboidal_region_type::shape_type(pos, pos)));
+    egfrd_world->add_structure(egfrd_cuboidal_region);
+
+    // //}}}
 
     // Random Number Generator (Instanciate and Initialize)
     // {{{
