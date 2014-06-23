@@ -33,6 +33,8 @@
 #include <ecell4/core/ReactionRule.hpp>
 #include <ecell4/core/Model.hpp>
 
+#include <ecell4/egfrd_impl/EGFRDWorld.hpp>
+
 typedef double Real;
 
 // Class to memize the positions of each particles
@@ -91,6 +93,8 @@ int main(int argc, char **argv)
 
     typedef ::CuboidalRegion<simulator_type::traits_type> cuboidal_region_type;
     typedef world_type::traits_type::structure_id_type structure_id_type;
+
+    typedef ecell4::egfrd::EGFRDWorld< ::CyclicWorldTraits<Real> > egfrd_world_type;
     // }}}
 
     // Constants    
@@ -114,9 +118,13 @@ int main(int argc, char **argv)
 
     boost::shared_ptr<cuboidal_region_type> cuboidal_region
         (new cuboidal_region_type("world", cuboidal_region_type::shape_type(pos, pos)));
-
     world->add_structure(cuboidal_region );
     // }}}
+    boost::shared_ptr<egfrd_world_type> egfrd_world(
+            new egfrd_world_type(world_size, matrix_size) );
+    boost::shared_ptr<cuboidal_region_type> cuboidal_region_egfrd
+        (new cuboidal_region_type("world", cuboidal_region_type::shape_type(pos, pos)));
+    egfrd_world->add_structure(cuboidal_region_egfrd);
 
     // Random Number Generator (Instanciate and Initialize)
     // {{{
@@ -160,6 +168,10 @@ int main(int argc, char **argv)
     world->add_species( world->get_molecule_info(sp1) );
     world->add_species( world->get_molecule_info(sp2) );
     world->add_species( world->get_molecule_info(sp3) );
+
+    egfrd_world->add_species(egfrd_world->get_molecule_info(sp1));
+    egfrd_world->add_species(egfrd_world->get_molecule_info(sp2));
+    egfrd_world->add_species(egfrd_world->get_molecule_info(sp3));
     // }}}
 
     // Thorow particles into world at random 
@@ -178,6 +190,7 @@ int main(int argc, char **argv)
                 std::cout << "(" << particle_pos[0] << particle_pos[1] << particle_pos[2] << ")" << std::endl;
                 container.add(radius, particle_pos);
                 world->new_particle( sp1.name() , particle_pos);
+                egfrd_world->new_particle( sp1.name(), particle_pos );
                 break;
             }
         }
