@@ -189,7 +189,7 @@ public:
     typedef typename traits_type::size_type size_type;
     typedef typename traits_type::structure_id_type structure_id_type;
     typedef typename traits_type::structure_type structure_type;
-    typedef std::pair<const particle_id_type, particle_type> particle_id_pair;
+    typedef std::pair</*const*/ particle_id_type, particle_type> particle_id_pair;
 
 protected:
     typedef std::map<species_id_type, species_type> species_map;

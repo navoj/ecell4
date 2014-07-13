@@ -6,6 +6,7 @@
 #include <ecell4/core/types.hpp>
 #include <ecell4/core/Position3.hpp>
 #include <ecell4/core/ParticleSpace.hpp>
+#include <ecell4/core/functions.hpp>
 //#include <ecell4/core/SerialIDGenerator.hpp>
 #include "SerialIDGenerator.hpp"
 #include "ParticleTraits.hpp"
@@ -20,15 +21,19 @@ namespace ecell4 {
 
 namespace egfrd {
 
+// Following struct definition is to solve the 
+// typedef definitions of World::ParticleContainerType, 
+// but it is needed to adapt BDPropagator etc.
 template <typename Ttraits_>
-class EGFRDWorld
+struct ParticleContainerCorrespondence 
 {
-public:
     typedef Ttraits_ traits_type;
     typedef typename traits_type::length_type length_type;
+    typedef typename traits_type::D_type D_type;
     typedef typename traits_type::molecule_info molecule_info;  //XXX
     typedef typename traits_type::position_type position_type;
     typedef typename traits_type::size_type size_type;
+    typedef typename traits_type::species_type species_type;
     typedef typename traits_type::species_id_type species_id_type;
     typedef typename traits_type::structure_id_type structure_id_type;
     typedef typename traits_type::structure_type structure_type;
@@ -36,7 +41,34 @@ public:
     typedef typename traits_type::particle_id_type particle_id_type;
     typedef typename traits_type::particle_id_generator particle_id_generator;
     typedef typename traits_type::particle_shape_type particle_shape_type;
-    typedef typename std::pair<const particle_id_type, particle_type> particle_id_pair;
+    typedef typename std::pair</*const*/ particle_id_type, particle_type> particle_id_pair;
+
+    typedef sized_iterator_range<particle_id_pair> particle_id_pair_range;
+
+    typedef std::pair<particle_id_pair, length_type> particle_id_pair_and_distance;
+    typedef std::vector<particle_id_pair_and_distance> particle_id_pair_and_distance_list;
+};
+
+template <typename Ttraits_>
+class EGFRDWorld
+{
+public:
+    typedef Ttraits_ traits_type;
+    typedef typename traits_type::length_type length_type;
+    typedef typename traits_type::D_type D_type;
+    typedef typename traits_type::molecule_info molecule_info;  //XXX
+    typedef typename traits_type::position_type position_type;
+    typedef typename traits_type::size_type size_type;
+    typedef typename traits_type::species_type species_type;
+    typedef typename traits_type::species_id_type species_id_type;
+    typedef typename traits_type::structure_id_type structure_id_type;
+    typedef typename traits_type::structure_type structure_type;
+    typedef typename traits_type::particle_type particle_type;
+    typedef typename traits_type::particle_id_type particle_id_type;
+    typedef typename traits_type::particle_id_generator particle_id_generator;
+    typedef typename traits_type::particle_shape_type particle_shape_type;
+    typedef typename std::pair</*const*/particle_id_type, particle_type> particle_id_pair;
+    typedef ParticleContainerCorrespondence<traits_type> particle_container_type;
 
 protected:
     typedef std::map<species_id_type, molecule_info> species_map;
@@ -53,6 +85,18 @@ public:
             typename structure_map::const_iterator> surface_iterator;
     typedef sized_iterator_range<species_iterator> species_range;
     typedef sized_iterator_range<surface_iterator> structures_range;
+    typedef sized_iterator_range<particle_id_pair> particle_id_pair_range;
+
+    typedef std::pair<particle_id_pair, length_type> particle_id_pair_and_distance;
+    typedef std::vector<particle_id_pair_and_distance> particle_id_pair_and_distance_list;
+
+    struct particle_id_pair_and_distance_comparator {
+        typedef particle_id_pair_and_distance arg_type;
+        bool operator()(arg_type const &lhs, arg_type const &rhs) const
+        {
+            return lhs.second < rhs.second;
+        }
+    };
 public:
     EGFRDWorld(length_type world_size = 1, size_type size = 1) : 
         world_size_(world_size), size_(size), 
@@ -88,20 +132,33 @@ public:
         {
             return false;
         }
-        this->partile_pool_[pp.second.sid()].erase(id);
+        this->particle_pool_[pp.second.sid()].erase(id);
         ps_->remove_particle(id);
         return true;
+    }
+
+    bool has_particle(particle_id_type const &pid) const
+    {
+        return ps_->has_particle(pid);
     }
 
     particle_id_set get_particle_ids(species_id_type const &sid) const
     {
         typename per_species_particle_id_set::const_iterator i(
-                particle_pool_find(sid));
+                particle_pool_.find(sid));
         if (i == this->particle_pool_.end())
         {
             throw not_found("Unknown species");
         }
         return i->second;
+    }
+
+    particle_id_pair_range get_particles_range() const
+    {
+        return particle_id_pair_range(
+                ps_->list_particles().begin(), 
+                ps_->list_particles().end(), 
+                ps_->list_particles().size());
     }
 
     size_type num_molecules(const ecell4::Species &sp) const
@@ -119,12 +176,6 @@ public:
     size_type num_particles(const species_id_type &sid) const 
     {
         return ps_->num_particles(ecell4::Species(sid));
-    }
-
-
-    length_type distance(const position_type &pos1, const position_type &pos2) const
-    {
-        return ps_->distance(pos1, pos2);
     }
 
     bool add_structure(boost::shared_ptr<structure_type> surface)
@@ -159,7 +210,7 @@ public:
         this->particle_pool_[info.id()] = particle_id_set();
     }
     
-    molecule_info get_species(species_id_type const &sid) const
+    const molecule_info &get_species(species_id_type const &sid) const
     {
         typename species_map::const_iterator i(species_map_.find(sid));
         if (species_map_.end() == i)
@@ -179,6 +230,137 @@ public:
     size_type world_size() const
     {
         return this->world_size_;
+    }
+    size_type cell_size() const
+    {
+        return world_size_ / size_;
+    }
+    size_type matrix_size() const
+    {
+        return 1;
+    }
+
+    particle_id_pair_and_distance_list list_particles_within_radius(
+            const position_type &pos, const Real& radius) const
+    {
+        return ps_->list_particles_within_radius(pos, radius);
+    }
+
+    particle_id_pair_and_distance_list list_particles_within_radius(
+            const position_type &pos, const Real& radius, 
+            const particle_id_type &ignore) const
+    {
+        return ps_->list_particles_within_radius(pos, radius, ignore);
+    }
+
+    particle_id_pair_and_distance_list list_particles_within_radius(
+            const position_type &pos, const Real& radius,
+            const particle_id_type &ignore1, const particle_id_type &ignore2)
+    {
+        return ps_->list_particles_within_radius(pos, radius, ignore1, ignore2);
+    }
+
+    particle_id_pair_and_distance_list list_particles_within_radius(
+            particle_shape_type const &s) const 
+    {
+        return ps_->list_particles_within_radius(s.position(), s.radius());
+    }
+    particle_id_pair_and_distance_list list_particles_within_radius(
+            particle_shape_type const &s, particle_id_type const &ignore) const
+    {
+        return ps_->list_particles_within_radius(s.position(), s.radius(), ignore);
+    }
+
+    particle_id_pair_and_distance_list list_particles_within_radius(
+            particle_shape_type const &s, 
+            particle_id_type const &ignore1, particle_id_type const &ignore2) const
+    {
+        return ps_->list_particles_within_radius(s.position(), s.radius(), ignore1, ignore2);
+    }
+
+    template <typename T>
+    length_type distance(const T &s1, const position_type &pos2) const
+    {
+        return ps_->distance(s1.position(), pos2);
+    }
+
+    length_type distance(const position_type &pos1, const position_type &pos2) const
+    {
+        return ps_->distance(pos1, pos2);
+    }
+
+    //
+    position_type apply_boundary(position_type const &pos) const
+    {
+        // XXX  
+        return ps_->apply_boundary(pos);
+    }
+
+    length_type apply_boundary(length_type const &v) const
+    {
+        return ecell4::modulo(v, world_size() );
+    }
+
+    position_type cyclic_transpose(position_type const &p0, position_type const &p1) const
+    {   
+        // XXX  
+        return ps_->periodic_transpose(p0, p1);
+    }
+    length_type cyclic_transpose(length_type const &p0, length_type const &p1) const
+    {
+        const length_type diff(p1 - p0), half(world_size() / 2);
+        if (diff > half)
+        {
+            return p0 + this->world_size();
+        }
+        else if (diff < -half)
+        {
+            return p0 - this->world_size();
+        }
+        else
+        {
+            return p0;
+        }
+    }
+
+    position_type calculate_pair_CoM(
+            position_type const& p1, position_type const& p2, 
+            D_type const &D1, D_type const &D2)
+    {
+        position_type retval;
+        const position_type p2t(this->cyclic_transpose(p2, p1));
+        return ecell4::modulo(
+                ecell4::divide(
+                    ecell4::add( ecell4::multiply(p1, D2), ecell4::multiply(p2t, D1)),
+                    ecell4::add(D1, D2)),
+                world_size());
+    }
+
+    particle_id_pair_and_distance_list* check_overlap_adaptor(particle_id_pair_and_distance_list result) const
+    {
+        particle_id_pair_and_distance_list* retp = new particle_id_pair_and_distance_list(result);
+        if (0 < retp->size()) 
+        {
+            particle_id_pair_and_distance_comparator c;
+            std::sort(retp->begin(), retp->end(), c);
+        }
+        return retp;
+    }
+
+    particle_id_pair_and_distance_list* check_overlap(particle_shape_type const& s) const
+    {
+        return check_overlap_adaptor( list_particles_within_radius(s) );
+    }
+    particle_id_pair_and_distance_list* check_overlap(particle_shape_type const &s,
+            particle_id_type const &ignore) const
+    {
+        return check_overlap_adaptor( list_particles_within_radius(s, ignore) );
+    }
+
+    particle_id_pair_and_distance_list* check_overlap(particle_shape_type const &s,
+            particle_id_type const &ignore1, particle_id_type const &ignore2) const
+    {
+        return check_overlap_adaptor( list_particles_within_radius(s, ignore1, ignore2) );
     }
     
 private:

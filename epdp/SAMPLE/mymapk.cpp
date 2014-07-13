@@ -95,6 +95,7 @@ int main(int argc, char **argv)
     typedef world_type::traits_type::structure_id_type structure_id_type;
 
     typedef ecell4::egfrd::EGFRDWorld< ::CyclicWorldTraits<Real> > egfrd_world_type;
+    typedef EGFRDSimulator< ::EGFRDSimulatorTraitsBase<egfrd_world_type> > new_simulator_type;
     // }}}
 
     // Constants    
@@ -186,7 +187,8 @@ int main(int argc, char **argv)
                     rng->uniform(0.0, edge_length[1]), 
                     rng->uniform(0.0, edge_length[2]) );
             double radius(boost::lexical_cast<double>( sp1.get_attribute("radius") ));
-            if (container.list_particles_within_radius(radius, particle_pos).size() == 0) {
+            //if (container.list_particles_within_radius(radius, particle_pos).size() == 0) {
+            if (egfrd_world->list_particles_within_radius(particle_pos, radius).size() == 0) {
                 std::cout << "(" << particle_pos[0] << particle_pos[1] << particle_pos[2] << ")" << std::endl;
                 container.add(radius, particle_pos);
                 world->new_particle( sp1.name() , particle_pos);
@@ -230,6 +232,15 @@ int main(int argc, char **argv)
     boost::shared_ptr< simulator_type> sim( 
             new simulator_type(
                 world, 
+                nw_rules_adapter,
+                internal_rng,
+                dissociation_retry_moves
+                )
+            );
+
+    boost::shared_ptr< new_simulator_type> new_sim( 
+            new new_simulator_type(
+                egfrd_world, 
                 nw_rules_adapter,
                 internal_rng,
                 dissociation_retry_moves
