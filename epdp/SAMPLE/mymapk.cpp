@@ -96,7 +96,7 @@ int main(int argc, char **argv)
     // Constants    
     // {{{
     const Real world_size(1e-6);
-    const Integer matrix_size(3);
+    const Integer matrix_size(1);
     const Real volume( world_size * world_size * world_size);
     const Integer N(60);
     const Real kd(0.1), U(0.5);
@@ -108,7 +108,11 @@ int main(int argc, char **argv)
     boost::shared_ptr<ecell4::NetworkModel> ecell4_nw_model(new ecell4::NetworkModel());
     // World Definition
     // {{{
-    boost::shared_ptr<world_type> world(new world_type(world_size, matrix_size));
+    boost::shared_ptr<world_type> world(new world_type(world_size) );
+    std::cout << "world_size = " << world->world_size() << std::endl;
+    std::cout << "cell_size = " << world->cell_size() << std::endl;
+    std::cout << "matrix_size = " << world->matrix_size() << std::endl;
+
     world_type::position_type edge_length(world_size, world_size, world_size);
     world_type::position_type pos(world_size / 2, world_size / 2, world_size / 2);
 

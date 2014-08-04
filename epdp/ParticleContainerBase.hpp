@@ -2,6 +2,7 @@
 #define PARTICLE_CONTAINER_BASE_HPP
 
 #include <ecell4/core/get_mapper_mf.hpp>
+#include <ecell4/core/ParticleSpace.hpp>
 #include "utils/range.hpp"
 #include "utils/unassignable_adapter.hpp"
 #include "MatrixSpace.hpp"
@@ -18,9 +19,10 @@ struct ParticleContainerUtils
     typedef typename traits_type::length_type length_type;
     typedef typename traits_type::particle_type particle_type;
     typedef typename traits_type::particle_id_type particle_id_type;
-    typedef std::pair<const particle_id_type, particle_type> particle_id_pair;
+    typedef std::pair</*const*/ particle_id_type, particle_type> particle_id_pair;
     typedef std::pair<particle_id_pair, length_type> particle_id_pair_and_distance;
     typedef unassignable_adapter<particle_id_pair_and_distance, get_default_impl::std::vector> particle_id_pair_and_distance_list;
+    //typedef std::vector<particle_id_pair_and_distance> particle_id_pair_and_distance_list;
 
     struct distance_comparator:
             public std::binary_function<
@@ -93,7 +95,7 @@ public:
     typedef typename traits_type::size_type size_type;
     typedef typename traits_type::structure_id_type structure_id_type;
     typedef typename traits_type::structure_type structure_type;
-    typedef std::pair<const particle_id_type, particle_type> particle_id_pair;
+    typedef std::pair</*const*/ particle_id_type, particle_type> particle_id_pair;
     typedef Transaction<traits_type> transaction_type;
 
     typedef MatrixSpace<particle_type, particle_id_type, ecell4::utils::get_mapper_mf> particle_matrix_type;
@@ -102,30 +104,37 @@ public:
     typedef sized_iterator_range<typename particle_matrix_type::const_iterator> particle_id_pair_range;
 
     typedef unassignable_adapter<particle_id_pair_and_distance, get_default_impl::std::vector> particle_id_pair_and_distance_list;
+    //typedef std::vector<particle_id_pair_and_distance> particle_id_pair_and_distance_list;
 
 protected:
 public:
     ParticleContainerBase(length_type world_size, size_type size)
-        : pmat_(world_size, size) {}
+        : pmat_(world_size, size), 
+          ecell4_ps_(new ecell4::ParticleSpaceVectorImpl(
+                      position_type(world_size, world_size, world_size)) ) {}
 
     virtual size_type num_particles() const
     {
-        return pmat_.size();
+        //return pmat_.size();
+        return ecell4_ps_->num_particles();
     }
 
     virtual length_type world_size() const
     {
-        return pmat_.world_size();
+        //return pmat_.world_size();
+        return ecell4_ps_->edge_lengths()[0];
     }
 
     length_type cell_size() const
     {
-        return pmat_.cell_size();
+        //return pmat_.cell_size();
+        return 1;
     }
 
     size_type matrix_size() const
     {
-        return pmat_.matrix_size();
+        //return pmat_.matrix_size();
+        return ecell4_ps_->edge_lengths()[0];
     }
 
     template<typename T_>
@@ -179,21 +188,38 @@ public:
             world_size());
     }
 
+    particle_id_pair_and_distance_list* list_particles_within_radius_wrapper
+        (std::vector<std::pair<std::pair<particle_id_type, particle_type>, length_type> > val) const
+    {
+        typename utils::distance_comparator comp;
+        particle_id_pair_and_distance_list *result = new particle_id_pair_and_distance_list();
+        std::sort(result->pbegin(), result->pend(), comp);
+        return result;
+    }
+
     virtual particle_id_pair_and_distance_list* check_overlap(particle_shape_type const& s) const
     {
-        return check_overlap<particle_shape_type>(s);
+        //return check_overlap<particle_shape_type>(s);
+        return list_particles_within_radius_wrapper(
+                ecell4_ps_->list_particles_within_radius(s.position(), s.radius()) );
     }
 
     virtual particle_id_pair_and_distance_list* check_overlap(particle_shape_type const& s, particle_id_type const& ignore) const
     {
-        return check_overlap(s, array_gen(ignore));
+        //return check_overlap(s, array_gen(ignore));
+        return list_particles_within_radius_wrapper(
+                ecell4_ps_->list_particles_within_radius(s.position(), s.radius(), ignore) );
     }
 
     virtual particle_id_pair_and_distance_list* check_overlap(particle_shape_type const& s, particle_id_type const& ignore1, particle_id_type const& ignore2) const
     {
-        return check_overlap(s, array_gen(ignore1, ignore2));
+        //return check_overlap(s, array_gen(ignore1, ignore2));
+        return list_particles_within_radius_wrapper(
+                ecell4_ps_->list_particles_within_radius(
+                    s.position(), s.radius(), ignore1, ignore2 ) );
     }
 
+    /*
     template<typename Tsph_, typename Tset_>
     particle_id_pair_and_distance_list* check_overlap(Tsph_ const& s, Tset_ const& ignore,
         typename boost::disable_if<boost::is_same<Tsph_, particle_id_pair> >::type* =0) const
@@ -211,9 +237,11 @@ public:
         traits_type::take_neighbor(pmat_, oc, s);
         return oc.result();
     }
+    */
 
     particle_id_pair get_particle(particle_id_type const& id, bool& found) const
     {
+        /*
         typename particle_matrix_type::const_iterator i(pmat_.find(id));
         if (pmat_.end() == i) {
             found = false;
@@ -221,47 +249,75 @@ public:
         }
         found = true;
         return *i;
+        */
+        if (ecell4_ps_->has_particle(id)) {
+            found = true;
+            return ecell4_ps_->get_particle(id);
+        } else {
+            found = false;
+        }
     }
 
     virtual particle_id_pair get_particle(particle_id_type const& id) const
     {
+        /*
         typename particle_matrix_type::const_iterator i(pmat_.find(id));
         if (pmat_.end() == i) {
             throw not_found(std::string("No such particle: id=")
                     + boost::lexical_cast<std::string>(id));
         }
         return *i;
+        */
+        if (ecell4_ps_->has_particle(id)) {
+            return ecell4_ps_->get_particle(id);
+        } else {
+            throw not_found(std::string("No such particle: id=")
+                    + boost::lexical_cast<std::string>(id));
+        }
     }
 
     virtual bool has_particle(particle_id_type const& id) const
     {
-        return pmat_.end() != pmat_.find(id);
+        //return pmat_.end() != pmat_.find(id);
+        return ecell4_ps_->has_particle(id);
     }
 
     virtual transaction_type* create_transaction();
 
     virtual particle_id_pair_generator* get_particles() const
     {
-        return make_range_generator<particle_id_pair>(pmat_);
+        //return make_range_generator<particle_id_pair>(pmat_);
+        return make_range_generator<particle_id_pair>(
+                ecell4_ps_->list_particles() );
     }
 
     particle_id_pair_range get_particles_range() const
     {
-        return particle_id_pair_range(pmat_.begin(), pmat_.end(), pmat_.size());
+        std::vector<std::pair<particle_id_type, particle_type> > list(
+                ecell4_ps_->list_particles());
+        return particle_id_pair_range(list.begin(), list.end(), list.size());
+        //return particle_id_pair_range(pmat_.begin(), pmat_.end(), pmat_.size());
     }
 
     virtual bool update_particle(particle_id_pair const& pi_pair)
     {
-        return pmat_.update(pi_pair).second;
+        //return pmat_.update(pi_pair).second;
+        return ecell4_ps_->update_particle(pi_pair.first, pi_pair.second);
     }
 
     virtual bool remove_particle(particle_id_type const& id)
     {
-        return pmat_.erase(id);
+        //return pmat_.erase(id);
+        if ( ecell4_ps_->has_particle(id) ) {
+            ecell4_ps_->remove_particle(id);
+            return true;
+        }
+        return false;
     }
 
 protected:
     particle_matrix_type pmat_;
+    boost::shared_ptr< ecell4::ParticleSpaceVectorImpl> ecell4_ps_;
 };
 
 template<typename Tderived_, typename Ttraits_>

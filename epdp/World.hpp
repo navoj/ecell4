@@ -189,7 +189,7 @@ public:
     typedef typename traits_type::size_type size_type;
     typedef typename traits_type::structure_id_type structure_id_type;
     typedef typename traits_type::structure_type structure_type;
-    typedef std::pair<const particle_id_type, particle_type> particle_id_pair;
+    typedef std::pair</*const*/ particle_id_type, particle_type> particle_id_pair;
 
 protected:
     typedef std::map<species_id_type, species_type> species_map;
@@ -208,8 +208,10 @@ public:
     typedef sized_iterator_range<surface_iterator> structures_range;
 
 public:
-    World(length_type world_size = 1., size_type size = 1)
-        : base_type(world_size, size) {}
+    //World(length_type world_size = 1., size_type size = 1)
+    //    : base_type(world_size, size) {}
+    World(length_type world_size = 1.)
+        : base_type(world_size, 1) {}
 
     virtual particle_id_pair new_particle(species_id_type const& sid,
             position_type const& pos)
