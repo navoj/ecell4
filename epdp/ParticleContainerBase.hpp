@@ -21,10 +21,10 @@ struct ParticleContainerUtils
     typedef typename traits_type::particle_id_type particle_id_type;
     typedef std::pair</*const*/ particle_id_type, particle_type> particle_id_pair;
     typedef std::pair<particle_id_pair, length_type> particle_id_pair_and_distance;
-    typedef unassignable_adapter<particle_id_pair_and_distance, get_default_impl::std::vector> particle_id_pair_and_distance_list;
-    //typedef std::vector<particle_id_pair_and_distance> particle_id_pair_and_distance_list;
+    //typedef unassignable_adapter<particle_id_pair_and_distance, get_default_impl::std::vector> particle_id_pair_and_distance_list;
+    typedef std::vector<particle_id_pair_and_distance> particle_id_pair_and_distance_list;
 
-    struct distance_comparator:
+    /*struct distance_comparator:
             public std::binary_function<
                 typename particle_id_pair_and_distance_list::placeholder,
                 typename particle_id_pair_and_distance_list::placeholder,
@@ -40,6 +40,15 @@ struct ParticleContainerUtils
         }
 
         const_caster c_;
+    }; */
+    struct distance_comparator:
+        public std::binary_function
+            <particle_id_pair_and_distance, particle_id_pair_and_distance, bool>
+    {
+        bool operator()(particle_id_pair_and_distance const &lhs, particle_id_pair_and_distance const &rhs) const
+        {
+            return lhs.second < rhs.second;
+        }
     };
 
     template<typename Tset_>
@@ -64,7 +73,8 @@ struct ParticleContainerUtils
         {
             if (result_)
             {
-                std::sort(result_->pbegin(), result_->pend(), compare_);
+                //std::sort(result_->pbegin(), result_->pend(), compare_);
+                std::sort(result_->begin(), result_->end(), compare_);
             }
             return result_;
         }
@@ -98,18 +108,19 @@ public:
     typedef std::pair</*const*/ particle_id_type, particle_type> particle_id_pair;
     typedef Transaction<traits_type> transaction_type;
 
-    typedef MatrixSpace<particle_type, particle_id_type, ecell4::utils::get_mapper_mf> particle_matrix_type;
+    //typedef MatrixSpace<particle_type, particle_id_type, ecell4::utils::get_mapper_mf> particle_matrix_type;
+    typedef ecell4::ParticleSpaceVectorImpl::particle_container_type particle_container_type;
     typedef abstract_limited_generator<particle_id_pair> particle_id_pair_generator;
     typedef std::pair<particle_id_pair, length_type> particle_id_pair_and_distance;
-    typedef sized_iterator_range<typename particle_matrix_type::const_iterator> particle_id_pair_range;
+    typedef sized_iterator_range<typename std::vector<particle_id_pair>::iterator> particle_id_pair_range;
 
-    typedef unassignable_adapter<particle_id_pair_and_distance, get_default_impl::std::vector> particle_id_pair_and_distance_list;
-    //typedef std::vector<particle_id_pair_and_distance> particle_id_pair_and_distance_list;
+    //typedef unassignable_adapter<particle_id_pair_and_distance, get_default_impl::std::vector> particle_id_pair_and_distance_list;
+    typedef std::vector<particle_id_pair_and_distance> particle_id_pair_and_distance_list;
 
 protected:
 public:
     ParticleContainerBase(length_type world_size, size_type size)
-        : pmat_(world_size, size), 
+        : //pmat_(world_size, size), 
           ecell4_ps_(new ecell4::ParticleSpaceVectorImpl(
                       position_type(world_size, world_size, world_size)) ) {}
 
@@ -188,12 +199,21 @@ public:
             world_size());
     }
 
+    struct pi_pair_distance_comparator {
+        bool operator() (
+                particle_id_pair_and_distance const &lhs, 
+                particle_id_pair_and_distance const &rhs) 
+        {
+            return lhs.second < rhs.second;
+        }
+    };
+
     particle_id_pair_and_distance_list* list_particles_within_radius_wrapper
         (std::vector<std::pair<std::pair<particle_id_type, particle_type>, length_type> > val) const
     {
-        typename utils::distance_comparator comp;
+        //typename utils::distance_comparator comp;
         particle_id_pair_and_distance_list *result = new particle_id_pair_and_distance_list();
-        std::sort(result->pbegin(), result->pend(), comp);
+        std::sort(result->begin(), result->end(), pi_pair_distance_comparator() );
         return result;
     }
 
@@ -316,7 +336,7 @@ public:
     }
 
 protected:
-    particle_matrix_type pmat_;
+    //particle_matrix_type pmat_;
     boost::shared_ptr< ecell4::ParticleSpaceVectorImpl> ecell4_ps_;
 };
 

@@ -225,6 +225,7 @@ public:
 
     virtual bool update_particle(particle_id_pair const& pi_pair)
     {
+        /*
         typename base_type::particle_matrix_type::iterator i(
                 base_type::pmat_.find(pi_pair.first));
         if (i != base_type::pmat_.end())
@@ -239,6 +240,19 @@ public:
         }
         BOOST_ASSERT(base_type::update_particle(pi_pair));
         particle_pool_[pi_pair.second.sid()].insert(pi_pair.first);
+        return true;
+        */
+        bool found;
+        particle_id_pair target(base_type::get_particle(pi_pair.first, found));
+        if (found != false) {
+            if (target.second.sid() != pi_pair.second.sid()) {
+                particle_pool_[target.second.sid()].erase(target.first);
+                particle_pool_[pi_pair.second.sid()].insert(pi_pair.first);
+            }
+            base_type::update_particle(pi_pair);
+            return false;
+        }
+        base_type::update_particle(pi_pair);
         return true;
     }
 
