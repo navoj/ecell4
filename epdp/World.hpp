@@ -211,7 +211,7 @@ public:
     //World(length_type world_size = 1., size_type size = 1)
     //    : base_type(world_size, size) {}
     World(length_type world_size = 1.)
-        : base_type(world_size, 1) {}
+        : base_type(world_size, 3) {}
 
     virtual particle_id_pair new_particle(species_id_type const& sid,
             position_type const& pos)

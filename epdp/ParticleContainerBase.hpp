@@ -122,7 +122,7 @@ public:
     ParticleContainerBase(length_type world_size, size_type size)
         : //pmat_(world_size, size), 
           ecell4_ps_(new ecell4::ParticleSpaceVectorImpl(
-                      position_type(world_size, world_size, world_size)) ) {}
+                      position_type(world_size, world_size, world_size)) ), size_(size) {}
 
     virtual size_type num_particles() const
     {
@@ -145,7 +145,8 @@ public:
     size_type matrix_size() const
     {
         //return pmat_.matrix_size();
-        return ecell4_ps_->edge_lengths()[0];
+        //return ecell4_ps_->edge_lengths()[0];
+        return this->size_;
     }
 
     template<typename T_>
@@ -212,8 +213,9 @@ public:
         (std::vector<std::pair<std::pair<particle_id_type, particle_type>, length_type> > val) const
     {
         //typename utils::distance_comparator comp;
+        typename utils::distance_comparator comparator;
         particle_id_pair_and_distance_list *result = new particle_id_pair_and_distance_list();
-        std::sort(result->begin(), result->end(), pi_pair_distance_comparator() );
+        std::sort(result->begin(), result->end(), comparator );
         return result;
     }
 
@@ -338,6 +340,7 @@ public:
 protected:
     //particle_matrix_type pmat_;
     boost::shared_ptr< ecell4::ParticleSpaceVectorImpl> ecell4_ps_;
+    size_type size_;
 };
 
 template<typename Tderived_, typename Ttraits_>
