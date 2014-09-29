@@ -3,6 +3,7 @@
 
 #include "exceptions.hpp"
 #include "Context.hpp"
+#include "comparators.hpp"
 #include "ParticleSpace.hpp"
 
 
@@ -159,6 +160,8 @@ ParticleSpaceVectorImpl::list_particles_within_radius(
         }
     }
 
+    std::sort(retval.begin(), retval.end(),
+        pair_second_element_comparator<std::pair<ParticleID, Particle>, Real>());
     return retval;
 }
 
@@ -182,6 +185,8 @@ ParticleSpaceVectorImpl::list_particles_within_radius(
         }
     }
 
+    std::sort(retval.begin(), retval.end(),
+        pair_second_element_comparator<std::pair<ParticleID, Particle>, Real>());
     return retval;
 }
 
@@ -206,6 +211,8 @@ ParticleSpaceVectorImpl::list_particles_within_radius(
         }
     }
 
+    std::sort(retval.begin(), retval.end(),
+        pair_second_element_comparator<std::pair<ParticleID, Particle>, Real>());
     return retval;
 }
 
