@@ -97,3 +97,102 @@ BOOST_AUTO_TEST_CASE(ParticleSpace_test_manupulate_particle)
     ParticleSpace_test_manipulate_particle_template<ParticleSpaceVectorImpl>();
     ParticleSpace_test_manipulate_particle_template<ParticleSpaceCellListImpl>();
 }
+
+template<typename Timpl_>
+void ParticleSpace_test_manipulate_multiple_particles_template()
+{
+    const Real L(1e-6);
+    Timpl_ target(Position3(L, L, L));
+    SerialIDGenerator<ParticleID> pidgen;
+
+    const Species sp1("A"), sp2("B");
+    const Real radius(2.5e-9), D(1e-12);
+    const ParticleID pid1(pidgen()), pid2(pidgen()), pid3(pidgen()),
+        pid4(pidgen()), pid5(pidgen());
+    // const Real L_6(L / 6);
+    const Position3
+        pos1(0, 0, 0),
+        pos2(0, 0, 0),
+        pos3(0, 0, 0),
+        pos4(0, 0, 0),
+        pos5(0, 0, 0);
+
+    BOOST_CHECK(target.update_particle(pid1, Particle(sp1, pos1, radius, D)));
+    BOOST_CHECK(target.update_particle(pid2, Particle(sp1, pos2, radius, D)));
+    BOOST_CHECK(target.update_particle(pid3, Particle(sp2, pos3, radius, D)));
+    BOOST_CHECK(target.update_particle(pid4, Particle(sp1, pos4, radius, D)));
+    BOOST_CHECK(target.update_particle(pid5, Particle(sp2, pos5, radius, D)));
+
+    BOOST_CHECK(target.has_particle(pid2));
+    BOOST_CHECK(target.has_particle(pid3));
+    BOOST_CHECK_EQUAL(target.num_particles(), 5);
+    BOOST_CHECK_EQUAL(target.num_particles(sp1), 3);
+    BOOST_CHECK_EQUAL(target.num_particles(sp2), 2);
+    BOOST_CHECK_EQUAL(target.num_particles_exact(sp1), 3);
+    BOOST_CHECK_EQUAL(target.num_particles_exact(sp2), 2);
+    BOOST_CHECK_EQUAL(target.list_particles().size(), 5);
+    BOOST_CHECK_EQUAL(target.list_particles(sp1).size(), 3);
+    BOOST_CHECK_EQUAL(target.list_particles(sp2).size(), 2);
+    BOOST_CHECK_EQUAL(target.list_particles_exact(sp1).size(), 3);
+    BOOST_CHECK_EQUAL(target.list_particles_exact(sp2).size(), 2);
+
+    target.remove_particle(pid2);
+    target.remove_particle(pid3);
+
+    BOOST_CHECK(!target.has_particle(pid2));
+    BOOST_CHECK(!target.has_particle(pid3));
+    BOOST_CHECK_EQUAL(target.num_particles(), 3);
+    BOOST_CHECK_EQUAL(target.num_particles(sp1), 2);
+    BOOST_CHECK_EQUAL(target.num_particles(sp2), 1);
+}
+
+BOOST_AUTO_TEST_CASE(ParticleSpace_test_multiple_particles)
+{
+    ParticleSpace_test_manipulate_multiple_particles_template<ParticleSpaceVectorImpl>();
+    ParticleSpace_test_manipulate_multiple_particles_template<ParticleSpaceCellListImpl>();
+}
+
+template<typename Timpl_>
+void ParticleSpace_test_list_particles_within_radius_template()
+{
+    const Real L(1e-6);
+    Timpl_ target(Position3(L, L, L));
+    SerialIDGenerator<ParticleID> pidgen;
+
+    const Species sp1("A"), sp2("B");
+    const Real radius(2.5e-9), D(1e-12);
+    const ParticleID pid1(pidgen()), pid2(pidgen()), pid3(pidgen()),
+        pid4(pidgen()), pid5(pidgen()), pid6(pidgen());
+    const Real L_8(L * 0.125), L_4(L * 0.25);
+    const Position3
+        pos1(L_8, L_8, L_8),
+        pos2(L - L_8, L - L_8, L - L_8),
+        pos3(L_8 + L_4, L_8, L_8),
+        pos4(L_8 + L_4, L_8 + L_4, L_8),
+        pos5(L_4, L_4, L_4),
+        pos6(L_4 + L_8, L_4 + L_8, L_4 + L_8);
+
+    BOOST_CHECK(target.update_particle(pid1, Particle(sp1, pos1, radius, D)));
+    BOOST_CHECK(target.update_particle(pid2, Particle(sp1, pos2, radius, D)));
+    BOOST_CHECK(target.update_particle(pid3, Particle(sp2, pos3, radius, D)));
+    BOOST_CHECK(target.update_particle(pid4, Particle(sp1, pos4, radius, D)));
+    BOOST_CHECK(target.update_particle(pid5, Particle(sp2, pos5, radius, D)));
+    BOOST_CHECK(target.update_particle(pid6, Particle(sp2, pos6, radius, D)));
+
+    BOOST_CHECK_EQUAL(target.num_particles(), 6);
+
+    const Real R(L * 0.3);
+    const std::vector<std::pair<std::pair<ParticleID, Particle>, Real> >
+        retval1(target.list_particles_within_radius(Position3(L_8, L_8, L_8), R));
+    BOOST_CHECK_EQUAL(retval1.size(), 3);
+    BOOST_CHECK_CLOSE(retval1[0].second, 0, 1e-6);
+    BOOST_CHECK_EQUAL(retval1[0].first.first, pid1);
+    BOOST_CHECK_EQUAL(retval1[1].first.first, pid5);
+    BOOST_CHECK_EQUAL(retval1[2].first.first, pid3);
+}
+
+BOOST_AUTO_TEST_CASE(ParticleSpace_test_list_particles_within_radius)
+{
+    ParticleSpace_test_list_particles_within_radius_template<ParticleSpaceVectorImpl>();
+    ParticleSpace_test_list_particles_within_radius_template<ParticleSpaceCellListImpl>();
+}
