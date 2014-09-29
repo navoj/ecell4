@@ -47,6 +47,10 @@ bool ParticleSpaceVectorImpl::has_particle(const ParticleID& pid) const
     return (i != index_map_.end());
 }
 
+/**
+ * update or add a particle.
+ * @return true if adding a new particle
+ */
 bool ParticleSpaceVectorImpl::update_particle(
     const ParticleID& pid, const Particle& p)
 {
@@ -56,12 +60,12 @@ bool ParticleSpaceVectorImpl::update_particle(
         particle_container_type::size_type idx(particles_.size());
         index_map_[pid] = idx;
         particles_.push_back(std::make_pair(pid, p));
-        return false;
+        return true;
     }
     else
     {
         particles_[(*i).second] = std::make_pair(pid, p);
-        return true;
+        return false;
     }
 }
 

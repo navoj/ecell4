@@ -143,7 +143,7 @@ public:
      * this function is a member of ParticleSpace
      * @param pid ParticleID
      * @param p Particle
-     * @return if the particle already exists or not bool
+     * @return if the particle does not exist or not bool
      */
     virtual bool update_particle(const ParticleID& pid, const Particle& p) = 0;
 
