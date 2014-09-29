@@ -207,7 +207,7 @@ std::vector<std::pair<std::pair<ParticleID, Particle>, Real> >
     }
 
     std::sort(retval.begin(), retval.end(),
-        pair_second_element_comparator<std::pair<ParticleID, Particle>, Real>());
+        utils::pair_second_element_comparator<std::pair<ParticleID, Particle>, Real>());
     return retval;
 }
 
@@ -261,7 +261,7 @@ std::vector<std::pair<std::pair<ParticleID, Particle>, Real> >
     }
 
     std::sort(retval.begin(), retval.end(),
-        pair_second_element_comparator<std::pair<ParticleID, Particle>, Real>());
+        utils::pair_second_element_comparator<std::pair<ParticleID, Particle>, Real>());
     return retval;
 }
 
@@ -315,7 +315,7 @@ std::vector<std::pair<std::pair<ParticleID, Particle>, Real> >
     }
 
     std::sort(retval.begin(), retval.end(),
-        pair_second_element_comparator<std::pair<ParticleID, Particle>, Real>());
+        utils::pair_second_element_comparator<std::pair<ParticleID, Particle>, Real>());
     return retval;
 }
 

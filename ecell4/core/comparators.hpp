@@ -4,6 +4,9 @@
 namespace ecell4
 {
 
+namespace utils
+{
+
 // template<typename Tfirst_, typename Tsecond_>
 // struct pair_first_element_unary_predicator
 // {
@@ -63,6 +66,8 @@ struct pair_second_element_comparator
         return v1.second < v2.second;
     }
 };
+
+} // utils
 
 } // ecell4
 
