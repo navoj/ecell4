@@ -166,7 +166,8 @@ void ParticleSpace_test_list_particles_within_radius_template()
     const Real L_8(L * 0.125), L_4(L * 0.25);
     const Position3
         pos1(L_8, L_8, L_8),
-        pos2(L - L_8, L - L_8, L - L_8),
+        // pos2(L * -0.04, L * -0.04, L * -0.04),
+        pos2(L * 0.96, L * 0.96, L * 0.96),
         pos3(L_8 + L_4, L_8, L_8),
         pos4(L_8 + L_4, L_8 + L_4, L_8),
         pos5(L_4, L_4, L_4),
@@ -181,14 +182,39 @@ void ParticleSpace_test_list_particles_within_radius_template()
 
     BOOST_CHECK_EQUAL(target.num_particles(), 6);
 
-    const Real R(L * 0.3);
+    const Real R1(L * 0.3);
     const std::vector<std::pair<std::pair<ParticleID, Particle>, Real> >
-        retval1(target.list_particles_within_radius(Position3(L_8, L_8, L_8), R));
-    BOOST_CHECK_EQUAL(retval1.size(), 3);
+        retval1(target.list_particles_within_radius(pos1, R1));
+    BOOST_CHECK_EQUAL(retval1.size(), 4);
     BOOST_CHECK_CLOSE(retval1[0].second, 0, 1e-6);
     BOOST_CHECK_EQUAL(retval1[0].first.first, pid1);
     BOOST_CHECK_EQUAL(retval1[1].first.first, pid5);
     BOOST_CHECK_EQUAL(retval1[2].first.first, pid3);
+    BOOST_CHECK_EQUAL(retval1[3].first.first, pid2);
+    BOOST_CHECK_CLOSE(retval1[3].second, 0.2857883832488648 * L, 1e-6);
+
+    BOOST_CHECK_EQUAL(target.list_particles_within_radius(pos1, R1, pid1).size(), 3);
+    BOOST_CHECK_EQUAL(target.list_particles_within_radius(pos1, R1, pid1, pid3).size(), 2);
+
+    const Real R2(L * 0.3);
+    const std::vector<std::pair<std::pair<ParticleID, Particle>, Real> >
+        retval2(target.list_particles_within_radius(pos5, R2, pid5));
+    BOOST_CHECK_EQUAL(retval2.size(), 4);
+    BOOST_CHECK(
+        retval2[0].first.first == pid1 || retval2[0].first.first == pid6
+        || retval2[0].first.first == pid4 || retval2[0].first.first == pid3);
+    BOOST_CHECK(
+        retval2[1].first.first == pid1 || retval2[1].first.first == pid6
+        || retval2[1].first.first == pid4 || retval2[1].first.first == pid3);
+    BOOST_CHECK(
+        retval2[2].first.first == pid1 || retval2[2].first.first == pid6
+        || retval2[2].first.first == pid4 || retval2[2].first.first == pid3);
+    BOOST_CHECK(
+        retval2[3].first.first == pid1 || retval2[3].first.first == pid6
+        || retval2[3].first.first == pid4 || retval2[3].first.first == pid3);
+    BOOST_CHECK_CLOSE(retval2[0].second, retval2[1].second, 1e-6);
+    BOOST_CHECK_CLOSE(retval2[0].second, retval2[2].second, 1e-6);
+    BOOST_CHECK_CLOSE(retval2[0].second, retval2[3].second, 1e-6);
 }
 
 BOOST_AUTO_TEST_CASE(ParticleSpace_test_list_particles_within_radius)
