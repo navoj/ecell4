@@ -109,7 +109,8 @@ protected:
 
     void clear();
 
-    inline cell_index_type index(const Position3& pos, double t = 1e-10) const
+    // inline cell_index_type index(const Position3& pos, double t = 1e-10) const
+    inline cell_index_type index(const Position3& pos) const
     {
         cell_index_type retval = {{
             static_cast<matrix_type::size_type>(
