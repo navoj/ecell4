@@ -33,6 +33,7 @@ struct LatticeSpaceHDF5Traits
         int64_t coord;
         double radius;
         double D;
+        char loc[32]; // species' serial may exceed the limit
     } h5_voxel_struct;
 
     static H5::CompType get_voxel_comp_type()
@@ -56,6 +57,9 @@ struct LatticeSpaceHDF5Traits
         h5_voxel_comp_type.insertMember(
             std::string("D"), HOFFSET(h5_voxel_struct, D),
             H5::PredType::NATIVE_DOUBLE);
+        h5_voxel_comp_type.insertMember(
+            std::string("loc"), HOFFSET(h5_voxel_struct, loc),
+            H5::StrType(H5::PredType::C_S1, 32));
         return h5_voxel_comp_type;
     }
 
@@ -104,6 +108,7 @@ void save_lattice_space(const Tspace_& space, H5::Group* root)
             h5_voxel_table[vidx].coord = voxels[j].second.coordinate();
             h5_voxel_table[vidx].radius = voxels[j].second.radius();
             h5_voxel_table[vidx].D = voxels[j].second.D();
+            std::strcpy(h5_voxel_table[vidx].loc, voxels[j].second.loc().c_str());
             ++vidx;
         }
     }
@@ -148,7 +153,7 @@ void save_lattice_space(const Tspace_& space, H5::Group* root)
             "voxel_radius", H5::PredType::IEEE_F64LE, H5::DataSpace(H5S_SCALAR)));
     attr_voxel_radius.write(H5::PredType::IEEE_F64LE, &voxel_radius);
 
-    const Position3 edge_lengths = space.edge_lengths();
+    const Real3 edge_lengths = space.edge_lengths();
     const hsize_t dims[] = {3};
     const H5::ArrayType lengths_type(H5::PredType::NATIVE_DOUBLE, 1, dims);
     H5::Attribute attr_lengths(
@@ -165,15 +170,11 @@ void load_lattice_space(const H5::Group& root, Tspace_* space)
     typedef typename traits_type::h5_species_struct h5_species_struct;
     typedef typename traits_type::h5_voxel_struct h5_voxel_struct;
 
-    double t;
-    root.openAttribute("t").read(H5::PredType::IEEE_F64LE, &t);
-    space->set_t(t);
-
     uint32_t is_periodic;
     root.openAttribute("is_periodic").read(
         H5::PredType::STD_I32LE, &is_periodic);
 
-    Position3 edge_lengths;
+    Real3 edge_lengths;
     const hsize_t dims[] = {3};
     const H5::ArrayType lengths_type(H5::PredType::NATIVE_DOUBLE, 1, dims);
     root.openAttribute("edge_lengths").read(lengths_type, &edge_lengths);
@@ -181,7 +182,11 @@ void load_lattice_space(const H5::Group& root, Tspace_* space)
     double voxel_radius;
     root.openAttribute("voxel_radius").read(H5::PredType::IEEE_F64LE, &voxel_radius);
 
-    space->cleanup(edge_lengths, voxel_radius, (is_periodic != 0));
+    space->reset(edge_lengths, voxel_radius, (is_periodic != 0));
+
+    double t;
+    root.openAttribute("t").read(H5::PredType::IEEE_F64LE, &t);
+    space->set_t(t);
 
     {
         H5::DataSet species_dset(root.openDataSet("species"));
@@ -216,7 +221,7 @@ void load_lattice_space(const H5::Group& root, Tspace_* space)
                 ParticleID(std::make_pair(h5_voxel_table[i].lot, h5_voxel_table[i].serial)),
                 Voxel(Species(species_id_map[h5_voxel_table[i].sid]),
                     h5_voxel_table[i].coord, h5_voxel_table[i].radius,
-                    h5_voxel_table[i].D));
+                    h5_voxel_table[i].D, h5_voxel_table[i].loc));
         }
     }
 }

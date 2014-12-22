@@ -6,6 +6,8 @@
 #include <ecell4/core/NetworkModel.hpp>
 #include <ecell4/ode/ODESimulator.hpp>
 
+#include <ecell4/core/Ratelaw.hpp>
+
 using namespace ecell4;
 using namespace ecell4::ode;
 
@@ -15,7 +17,7 @@ using namespace ecell4::ode;
 int main(int argc, char** argv)
 {
     const Real L(1e-6);
-    const Position3 edge_lengths(L, L, L);
+    const Real3 edge_lengths(L, L, L);
     const Real volume(L * L * L);
     const Real N(60);
     const Real ka(0.1), U(0.5);
@@ -26,11 +28,15 @@ int main(int argc, char** argv)
     rr1.add_reactant(sp1);
     rr1.add_product(sp2);
     rr1.add_product(sp3);
+    boost::shared_ptr<RatelawMassAction> ratelaw1(new RatelawMassAction(ka));
+    rr1.set_ratelaw(ratelaw1);
     const Real kd(ka * volume * (1 - U) / (U * U * N));
     rr2.set_k(kd);
     rr2.add_reactant(sp2);
     rr2.add_reactant(sp3);
     rr2.add_product(sp1);
+    boost::shared_ptr<RatelawMassAction> ratelaw2(new RatelawMassAction(kd));
+    rr2.set_ratelaw(ratelaw2);
 
     boost::shared_ptr<NetworkModel> model(new NetworkModel());
     model->add_species_attribute(sp1);

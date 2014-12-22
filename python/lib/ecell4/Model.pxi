@@ -65,15 +65,15 @@ cdef class Model:
             inc(it)
         return retval
 
-    # def list_species(self):
-    #     cdef vector[Cpp_Species] species = self.thisptr.get().list_species()
-    #     retval = []
-    #     cdef vector[Cpp_Species].iterator it = species.begin()
-    #     while it != species.end():
-    #         retval.append(Species_from_Cpp_Species(
-    #             <Cpp_Species*>(address(deref(it)))))
-    #         inc(it)
-    #     return retval
+    def list_species(self):
+        cdef vector[Cpp_Species] species = self.thisptr.get().list_species()
+        retval = []
+        cdef vector[Cpp_Species].iterator it = species.begin()
+        while it != species.end():
+            retval.append(Species_from_Cpp_Species(
+                <Cpp_Species*>(address(deref(it)))))
+            inc(it)
+        return retval
 
     def query_reaction_rules(self, Species sp1, Species sp2 = None):
         cdef vector[Cpp_ReactionRule] rules
@@ -90,6 +90,36 @@ cdef class Model:
                 <Cpp_ReactionRule*>(address(deref(it)))))
             inc(it)
         return retval
+
+    def add_species_attributes(self, attrs):
+        cdef vector[Cpp_Species] species
+        for sp in attrs:
+            species.push_back(deref((<Species>sp).thisptr))
+        self.thisptr.get().add_species_attributes(species)
+
+    def add_reaction_rules(self, rrs):
+        cdef vector[Cpp_ReactionRule] reaction_rules
+        for rr in rrs:
+            reaction_rules.push_back(deref((<ReactionRule>rr).thisptr))
+        self.thisptr.get().add_reaction_rules(reaction_rules)
+
+    def expand(self, seeds, max_itr=None, max_stoich=None):
+        cdef vector[Cpp_Species] _seeds
+        cdef map[Cpp_Species, Integer] _max_stoich
+        for sp in seeds:
+            _seeds.push_back(deref((<Species>sp).thisptr))
+
+        if max_stoich is not None:
+            for sp, n in max_stoich.items():
+                _max_stoich[deref((<Species>sp).thisptr)] = <Integer>n
+            return Model_from_Cpp_Model(
+                self.thisptr.get().expand(_seeds, <Integer>max_itr, _max_stoich))
+        elif max_itr is not None:
+            return Model_from_Cpp_Model(
+                self.thisptr.get().expand(_seeds, <Integer>max_itr))
+        else:
+            return Model_from_Cpp_Model(
+                self.thisptr.get().expand(_seeds))
 
 cdef Model Model_from_Cpp_Model(shared_ptr[Cpp_Model] m):
     r = Model()

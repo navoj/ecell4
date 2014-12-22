@@ -10,6 +10,9 @@
 #include <boost/test/floating_point_comparison.hpp>
 
 #include "../LatticeWorld.hpp"
+#include "../../core/Sphere.hpp"
+//#include <ecell4/core/Sphere.hpp>
+#include <fstream>
 
 using namespace ecell4;
 using namespace ecell4::lattice;
@@ -20,7 +23,7 @@ BOOST_AUTO_TEST_CASE(LatticeWorld_test_constructor)
 {
     boost::shared_ptr<GSLRandomNumberGenerator>
         rng(new GSLRandomNumberGenerator());
-    const Position3 edge_lengths(1e-6, 1e-6, 1e-6);
+    const Real3 edge_lengths(1e-6, 1e-6, 1e-6);
     const Real voxel_radius(DEFAULT_VOXEL_RADIUS);
     LatticeWorld world(edge_lengths, voxel_radius, rng);
 }
@@ -29,7 +32,7 @@ BOOST_AUTO_TEST_CASE(LatticeWorld_test_t)
 {
     boost::shared_ptr<GSLRandomNumberGenerator>
         rng(new GSLRandomNumberGenerator());
-    const Position3 edge_lengths(1e-6, 1e-6, 1e-6);
+    const Real3 edge_lengths(1e-6, 1e-6, 1e-6);
     const Real voxel_radius(DEFAULT_VOXEL_RADIUS);
     LatticeWorld world(edge_lengths, voxel_radius, rng);
     BOOST_CHECK_EQUAL(world.t(), 0);
@@ -41,7 +44,7 @@ BOOST_AUTO_TEST_CASE(LatticeWorld_test_num_species)
 {
     boost::shared_ptr<GSLRandomNumberGenerator>
         rng(new GSLRandomNumberGenerator());
-    const Position3 edge_lengths(1e-6, 1e-6, 1e-6);
+    const Real3 edge_lengths(1e-6, 1e-6, 1e-6);
     const Real voxel_radius(DEFAULT_VOXEL_RADIUS);
     LatticeWorld world(edge_lengths, voxel_radius, rng);
     BOOST_CHECK_EQUAL(world.num_species(), 0);
@@ -51,7 +54,7 @@ BOOST_AUTO_TEST_CASE(LatticeWorld_test_has_species)
 {
     boost::shared_ptr<GSLRandomNumberGenerator>
         rng(new GSLRandomNumberGenerator());
-    const Position3 edge_lengths(1e-6, 1e-6, 1e-6);
+    const Real3 edge_lengths(1e-6, 1e-6, 1e-6);
     const Real voxel_radius(DEFAULT_VOXEL_RADIUS);
     LatticeWorld world(edge_lengths, voxel_radius, rng);
     Species sp(std::string("Species"));
@@ -62,7 +65,7 @@ BOOST_AUTO_TEST_CASE(LatticeWorld_test_list_particles)
 {
     boost::shared_ptr<GSLRandomNumberGenerator>
         rng(new GSLRandomNumberGenerator());
-    const Position3 edge_lengths(1e-6, 1e-6, 1e-6);
+    const Real3 edge_lengths(1e-6, 1e-6, 1e-6);
     const Real voxel_radius(DEFAULT_VOXEL_RADIUS);
     LatticeWorld world(edge_lengths, voxel_radius, rng);
     std::vector<std::pair<ParticleID, Particle> > particles(world.list_particles());
@@ -74,13 +77,13 @@ BOOST_AUTO_TEST_CASE(LatticeWorld_test_update_particles)
     boost::shared_ptr<GSLRandomNumberGenerator>
         rng(new GSLRandomNumberGenerator());
     SerialIDGenerator<ParticleID> sidgen;
-    const Position3 edge_lengths(1e-6, 1e-6, 1e-6);
+    const Real3 edge_lengths(1e-6, 1e-6, 1e-6);
     const Real voxel_radius(DEFAULT_VOXEL_RADIUS);
     LatticeWorld world(edge_lengths, voxel_radius, rng);
 
     ParticleID pid(sidgen());
     Species sp(std::string("A"));
-    const Position3 pos(2e-7, 1e-7, 0);
+    const Real3 pos(2e-7, 1e-7, 0);
     Real r(0);
     Real d(0);
     Particle p(sp, pos, r, d);
@@ -95,7 +98,7 @@ BOOST_AUTO_TEST_CASE(LatticeWorld_test_update_particles)
 
 // BOOST_AUTO_TEST_CASE(LatticeWorld_test_register_species)
 // {
-//     const Position3 edge_lengths(1e-6,1e-6,1e-6);
+//     const Real3 edge_lengths(1e-6,1e-6,1e-6);
 //     const Real voxel_radius(DEFAULT_VOXEL_RADIUS);
 //     boost::shared_ptr<GSLRandomNumberGenerator>
 //         rng(new GSLRandomNumberGenerator());
@@ -114,7 +117,7 @@ BOOST_AUTO_TEST_CASE(LatticeWorld_test_update_particles)
 
 BOOST_AUTO_TEST_CASE(LatticeWorld_test_add_molecule)
 {
-    const Position3 edge_lengths(1e-6,1e-6,1e-6);
+    const Real3 edge_lengths(1e-6,1e-6,1e-6);
     const Real voxel_radius(2.5e-9);
     boost::shared_ptr<GSLRandomNumberGenerator>
         rng(new GSLRandomNumberGenerator());
@@ -134,7 +137,7 @@ BOOST_AUTO_TEST_CASE(LatticeWorld_test_add_molecule)
 
 BOOST_AUTO_TEST_CASE(LatticeWorld_test_add_molecules)
 {
-    const Position3 edge_lengths(1e-6,1e-6,1e-6);
+    const Real3 edge_lengths(1e-6,1e-6,1e-6);
     const Real voxel_radius(DEFAULT_VOXEL_RADIUS);
     boost::shared_ptr<GSLRandomNumberGenerator>
         rng(new GSLRandomNumberGenerator());
@@ -149,9 +152,70 @@ BOOST_AUTO_TEST_CASE(LatticeWorld_test_add_molecules)
     BOOST_CHECK_EQUAL(world.num_particles(sp), N);
 }
 
+BOOST_AUTO_TEST_CASE(LatticeWorld_test_neighbor)
+{
+    const Real3 edge_lengths(1e-6,1e-6,1e-6);
+    const Real voxel_radius(DEFAULT_VOXEL_RADIUS);
+    boost::shared_ptr<GSLRandomNumberGenerator>
+        rng(new GSLRandomNumberGenerator());
+    LatticeWorld world(edge_lengths, voxel_radius, rng);
+
+    const Integer3 center(
+            world.col_size()/2, world.row_size()/2, world.layer_size()/2);
+    const LatticeWorld::private_coordinate_type cc(
+            world.coord2private(world.global2coord(center)));
+    const Real3 cp(world.coordinate2position(
+                world.global2coord(center)));
+
+    Species sp(std::string("TEST"));
+    sp.set_attribute("radius", "2.5e-9");
+    sp.set_attribute("D", "1e-12");
+    const Integer n(world.add_neighbors(sp, cc));
+    std::vector<std::pair<ParticleID, Particle> > particles(
+            world.list_particles());
+    std::ofstream ofs("neighbor.txt");
+    ofs << "center" << std::endl;
+    ofs << "(" << cp[0] << "," << cp[1] << "," << cp[2] << ") "
+        << world.private2coord(cc) << std::endl;
+    for (std::vector<std::pair<ParticleID, Particle> >::iterator itr(
+                particles.begin()); itr != particles.end(); ++itr)
+    {
+        Real3 pos((*itr).second.position());
+        BOOST_ASSERT(length(pos-cp) < voxel_radius*2.1);
+        const LatticeWorld::coordinate_type coord(world.position2coordinate(pos));
+        //pos /= voxel_radius * 2;
+        ofs << "(" << pos[0] << "," << pos[1] << "," << pos[2] << ") "
+            << coord << std::endl;
+    }
+    ofs.close();
+
+    world.save("neighbor.h5");
+}
+
+BOOST_AUTO_TEST_CASE(LatticeWorld_test_add_shape)
+{
+    const Real3 edge_lengths(1e-6,1e-6,1e-6);
+    const Real voxel_radius(DEFAULT_VOXEL_RADIUS);
+    boost::shared_ptr<GSLRandomNumberGenerator>
+        rng(new GSLRandomNumberGenerator());
+    LatticeWorld world(edge_lengths, voxel_radius, rng);
+
+    Species sp(std::string("TEST"));
+    sp.set_attribute("radius", "2.5e-9");
+    sp.set_attribute("D", "1e-12");
+
+    const Sphere sphere(Real3(5e-7, 5e-7, 5e-7), 5e-7*1.5);
+
+    const Integer n(world.add_structure(sp, sphere));
+    BOOST_ASSERT(n > 0);
+    BOOST_CHECK_EQUAL(world.num_particles(sp), n);
+
+    world.save("sphere.h5");
+}
+
 BOOST_AUTO_TEST_CASE(LatticeWorld_test_move)
 {
-    const Position3 edge_lengths(1e-6,1e-6,1e-6);
+    const Real3 edge_lengths(1e-6,1e-6,1e-6);
     const Real voxel_radius(2.5e-9);
     boost::shared_ptr<GSLRandomNumberGenerator>
         rng(new GSLRandomNumberGenerator());
@@ -175,4 +239,26 @@ BOOST_AUTO_TEST_CASE(LatticeWorld_test_move)
     BOOST_CHECK(!mt->is_vacant());
 
     BOOST_CHECK(world.move(from, to));
+}
+
+BOOST_AUTO_TEST_CASE(LatticeWorld_test_structure)
+{
+    const Real3 edge_lengths(5e-7, 5e-7, 5e-7);
+    const Real voxel_radius(DEFAULT_VOXEL_RADIUS);
+    boost::shared_ptr<GSLRandomNumberGenerator>
+        rng(new GSLRandomNumberGenerator());
+    LatticeWorld world(edge_lengths, voxel_radius, rng);
+
+    Species membrane("Membrane", "2.5e-9", "0");
+
+    Species sp("SpeciesA", "2.5e-9", "1e-12");
+    sp.set_attribute("location", "Membrane");
+
+    const Sphere sphere(Real3(2.5e-7, 2.5e-7, 2.5e-7), 2e-7);
+
+    BOOST_CHECK(world.add_structure(membrane, sphere) > 0);
+    BOOST_CHECK(world.new_particle(Particle(sp, Real3(2.5e-7, 2.5e-7, 4.5e-7),
+                    2.5e-9, 1e-12)).second);
+
+    world.save("structure.h5");
 }

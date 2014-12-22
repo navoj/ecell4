@@ -3,6 +3,7 @@
 
 #include "exceptions.hpp"
 #include "Context.hpp"
+#include "comparators.hpp"
 #include "ParticleSpace.hpp"
 
 
@@ -47,6 +48,10 @@ bool ParticleSpaceVectorImpl::has_particle(const ParticleID& pid) const
     return (i != index_map_.end());
 }
 
+/**
+ * update or add a particle.
+ * @return true if adding a new particle
+ */
 bool ParticleSpaceVectorImpl::update_particle(
     const ParticleID& pid, const Particle& p)
 {
@@ -56,12 +61,12 @@ bool ParticleSpaceVectorImpl::update_particle(
         particle_container_type::size_type idx(particles_.size());
         index_map_[pid] = idx;
         particles_.push_back(std::make_pair(pid, p));
-        return false;
+        return true;
     }
     else
     {
         particles_[(*i).second] = std::make_pair(pid, p);
-        return true;
+        return false;
     }
 }
 
@@ -140,7 +145,7 @@ ParticleSpaceVectorImpl::list_particles_exact(const Species& sp) const
 
 std::vector<std::pair<std::pair<ParticleID, Particle>, Real> >
 ParticleSpaceVectorImpl::list_particles_within_radius(
-    const Position3& pos, const Real& radius) const
+    const Real3& pos, const Real& radius) const
 {
     const Real rsq(pow_2(radius));
     std::vector<std::pair<std::pair<ParticleID, Particle>, Real> > retval;
@@ -155,12 +160,14 @@ ParticleSpaceVectorImpl::list_particles_within_radius(
         }
     }
 
+    std::sort(retval.begin(), retval.end(),
+        utils::pair_second_element_comparator<std::pair<ParticleID, Particle>, Real>());
     return retval;
 }
 
 std::vector<std::pair<std::pair<ParticleID, Particle>, Real> >
 ParticleSpaceVectorImpl::list_particles_within_radius(
-    const Position3& pos, const Real& radius, const ParticleID& ignore) const
+    const Real3& pos, const Real& radius, const ParticleID& ignore) const
 {
     const Real rsq(pow_2(radius));
     std::vector<std::pair<std::pair<ParticleID, Particle>, Real> > retval;
@@ -178,12 +185,14 @@ ParticleSpaceVectorImpl::list_particles_within_radius(
         }
     }
 
+    std::sort(retval.begin(), retval.end(),
+        utils::pair_second_element_comparator<std::pair<ParticleID, Particle>, Real>());
     return retval;
 }
 
 std::vector<std::pair<std::pair<ParticleID, Particle>, Real> >
 ParticleSpaceVectorImpl::list_particles_within_radius(
-    const Position3& pos, const Real& radius,
+    const Real3& pos, const Real& radius,
     const ParticleID& ignore1, const ParticleID& ignore2) const
 {
     const Real rsq(pow_2(radius));
@@ -202,12 +211,18 @@ ParticleSpaceVectorImpl::list_particles_within_radius(
         }
     }
 
+    std::sort(retval.begin(), retval.end(),
+        utils::pair_second_element_comparator<std::pair<ParticleID, Particle>, Real>());
     return retval;
 }
 
-void ParticleSpaceVectorImpl::set_edge_lengths(const Position3& edge_lengths)
+void ParticleSpaceVectorImpl::reset(const Real3& edge_lengths)
 {
-    for (Position3::size_type dim(0); dim < 3; ++dim)
+    base_type::t_ = 0.0;
+    particles_.clear();
+    index_map_.clear();
+
+    for (Real3::size_type dim(0); dim < 3; ++dim)
     {
         if (edge_lengths[dim] <= 0)
         {
@@ -216,12 +231,6 @@ void ParticleSpaceVectorImpl::set_edge_lengths(const Position3& edge_lengths)
     }
 
     edge_lengths_ = edge_lengths;
-}
-
-void ParticleSpaceVectorImpl::clear()
-{
-    particles_.clear();
-    index_map_.clear();
 }
 
 } // ecell4

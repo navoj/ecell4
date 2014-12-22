@@ -3,11 +3,10 @@
 
 // #include <set>
 #include <stdexcept>
-#include <sstream>
-#include <boost/algorithm/string.hpp>
 
 #include "types.hpp"
 #include "Species.hpp"
+#include "Ratelaw.hpp"
 
 
 namespace ecell4
@@ -86,31 +85,30 @@ public:
         products_.push_back(sp);
     }
 
-    const std::string as_string() const
+    // Ratelaw related functions.
+    void set_ratelaw(const boost::shared_ptr<Ratelaw> ratelaw)
     {
-        std::stringstream oss;
-        std::vector<std::string> tmp;
-        for (reactant_container_type::const_iterator i(reactants_.begin());
-            i != reactants_.end(); ++i)
-        {
-            tmp.push_back((*i).serial());
-        }
-        oss << boost::algorithm::join(tmp, "+") << ">";
-        tmp.clear();
-        for (product_container_type::const_iterator i(products_.begin());
-            i != products_.end(); ++i)
-        {
-            tmp.push_back((*i).serial());
-        }
-        oss << boost::algorithm::join(tmp, "+") << "|" << k_;
-        return oss.str();
+        this->ratelaw_ = ratelaw;
     }
+    boost::shared_ptr<Ratelaw> get_ratelaw() const
+    {
+        return this->ratelaw_.lock();
+    }
+    bool has_ratelaw() const
+    {
+        return !(this->ratelaw_.expired());
+    }
+
+    const std::string as_string() const;
+    Integer count(const reactant_container_type& reactants) const;
+    std::vector<ReactionRule> generate(const reactant_container_type& reactants) const;
 
 protected:
 
     Real k_;
     reactant_container_type reactants_;
     product_container_type products_;
+    boost::weak_ptr<Ratelaw> ratelaw_;
 };
 
 inline bool operator<(const ReactionRule& lhs, const ReactionRule& rhs)

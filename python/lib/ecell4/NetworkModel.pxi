@@ -31,17 +31,17 @@ cdef class NetworkModel:
     def has_reaction_rule(self, ReactionRule rr):
         return self.thisptr.get().has_reaction_rule(deref(rr.thisptr))
 
-    def num_reaction_rules(self):
-        return self.thisptr.get().num_reaction_rules()
+    # def num_reaction_rules(self):
+    #     return self.thisptr.get().num_reaction_rules()
 
     def apply_species_attributes(self, Species sp):
         cdef Cpp_Species retval = self.thisptr.get().apply_species_attributes(
             deref(sp.thisptr))
         return Species_from_Cpp_Species(address(retval))
 
-    def create_species(self, string name):
-        cdef Cpp_Species retval = self.thisptr.get().create_species(name)
-        return Species_from_Cpp_Species(address(retval))
+    # def create_species(self, string name):
+    #     cdef Cpp_Species retval = self.thisptr.get().create_species(name)
+    #     return Species_from_Cpp_Species(address(retval))
 
     def reaction_rules(self):
         cdef vector[Cpp_ReactionRule] c_rr_vector = self.thisptr.get().reaction_rules()
@@ -89,13 +89,35 @@ cdef class NetworkModel:
             inc(it)
         return retval
 
-    # def add_reactant(self, PySpecies sp):
-    #     self.thisptr.add_reactant(deref(sp.thisptr))
-    # def add_product(self, PySpecies sp):
-    #     self.thisptr.add_product(deref(sp.thisptr))
-    # def reactants(self):
-    #     # self.thisptr.reactants()
-    #     pass
+    def add_species_attributes(self, attrs):
+        cdef vector[Cpp_Species] species
+        for sp in attrs:
+            species.push_back(deref((<Species>sp).thisptr))
+        self.thisptr.get().add_species_attributes(species)
+
+    def add_reaction_rules(self, rrs):
+        cdef vector[Cpp_ReactionRule] reaction_rules
+        for rr in rrs:
+            reaction_rules.push_back(deref((<ReactionRule>rr).thisptr))
+        self.thisptr.get().add_reaction_rules(reaction_rules)
+
+    def expand(self, seeds, max_itr=None, max_stoich=None):
+        cdef vector[Cpp_Species] _seeds
+        cdef map[Cpp_Species, Integer] _max_stoich
+        for sp in seeds:
+            _seeds.push_back(deref((<Species>sp).thisptr))
+
+        if max_stoich is not None:
+            for sp, n in max_stoich.items():
+                _max_stoich[deref((<Species>sp).thisptr)] = <Integer>n
+            return Model_from_Cpp_Model(
+                self.thisptr.get().expand(_seeds, <Integer>max_itr, _max_stoich))
+        elif max_itr is not None:
+            return Model_from_Cpp_Model(
+                self.thisptr.get().expand(_seeds, <Integer>max_itr))
+        else:
+            return Model_from_Cpp_Model(
+                self.thisptr.get().expand(_seeds))
 
 cdef NetworkModel NetworkModel_from_Cpp_NetworkModel(
     shared_ptr[Cpp_NetworkModel] m):

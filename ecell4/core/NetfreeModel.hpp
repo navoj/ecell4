@@ -7,6 +7,7 @@
 #include <set>
 #include <algorithm>
 #include <iterator>
+#include <boost/shared_ptr.hpp>
 
 #include "types.hpp"
 #include "Species.hpp"
@@ -14,6 +15,7 @@
 #include "Model.hpp"
 
 #include "Context.hpp"
+#include "NetworkModel.hpp"
 
 
 namespace ecell4
@@ -95,11 +97,35 @@ public:
         return reaction_rules_.size();
     }
 
+    boost::shared_ptr<Model> expand(
+        const std::vector<Species>& sp, const Integer max_itr,
+        const std::map<Species, Integer>& max_stoich) const;
+    boost::shared_ptr<Model> expand(
+        const std::vector<Species>& sp, const Integer max_itr) const;
+    boost::shared_ptr<Model> expand(const std::vector<Species>& sp) const;
+
 protected:
 
     species_container_type species_attributes_;
     reaction_rule_container_type reaction_rules_;
 };
+
+namespace extras
+{
+
+std::pair<boost::shared_ptr<NetworkModel>, bool> generate_network_from_netfree_model(
+    const NetfreeModel& nfm, const std::vector<Species>& seeds, const Integer max_itr,
+    const std::map<Species, Integer>& max_stoich);
+
+inline std::pair<boost::shared_ptr<NetworkModel>, bool> generate_network_from_netfree_model(
+    const NetfreeModel& nfm, const std::vector<Species>& seeds, const Integer max_itr)
+{
+    const std::map<Species, Integer> max_stoich;
+    return generate_network_from_netfree_model(
+        nfm, seeds, max_itr, max_stoich);
+}
+
+} // extras
 
 } // ecell4
 

@@ -160,6 +160,14 @@ public:
     virtual const reaction_rule_container_type& reaction_rules() const = 0;
     virtual const species_container_type& species_attributes() const = 0;
 
+    virtual boost::shared_ptr<Model> expand(
+        const std::vector<Species>& sp, const Integer max_itr,
+        const std::map<Species, Integer>& max_stoich) const = 0;
+    virtual boost::shared_ptr<Model> expand(
+        const std::vector<Species>& sp, const Integer max_itr) const = 0;
+    virtual boost::shared_ptr<Model> expand(
+        const std::vector<Species>& sp) const = 0;
+
     const std::vector<Species> list_species() const
     {
         std::vector<Species> retval;
@@ -176,10 +184,28 @@ public:
             std::copy(products.begin(), products.end(),
                       std::back_inserter(retval));
         }
+        std::sort(retval.begin(), retval.end());
         retval.erase(
             std::unique(retval.begin(), retval.end()), retval.end());
-        std::sort(retval.begin(), retval.end());
         return retval;
+    }
+
+    void add_species_attributes(const std::vector<Species>& attrs)
+    {
+        for (std::vector<Species>::const_iterator i(attrs.begin());
+            i != attrs.end(); ++i)
+        {
+            add_species_attribute(*i);
+        }
+    }
+
+    void add_reaction_rules(const std::vector<ReactionRule>& rrs)
+    {
+        for (std::vector<ReactionRule>::const_iterator i(rrs.begin());
+            i != rrs.end(); ++i)
+        {
+            add_reaction_rule(*i);
+        }
     }
 };
 

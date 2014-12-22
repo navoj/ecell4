@@ -33,7 +33,7 @@ void CompartmentSpaceVectorImpl::set_volume(const Real& volume)
 
     volume_ = volume;
     const Real L(cbrt(volume));
-    edge_lengths_ = Position3(L, L, L);
+    edge_lengths_ = Real3(L, L, L);
 }
 
 void CompartmentSpaceVectorImpl::reserve_species(const Species& sp)
@@ -153,13 +153,6 @@ void CompartmentSpaceVectorImpl::remove_molecules(
     }
 
     num_molecules_[(*i).second] -= num;
-}
-
-void CompartmentSpaceVectorImpl::clear()
-{
-    index_map_.clear();
-    num_molecules_.clear();
-    species_.clear();
 }
 
 } // ecell4

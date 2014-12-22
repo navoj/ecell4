@@ -1,3 +1,4 @@
+import collections
 from cython.operator cimport dereference as deref, preincrement as inc
 from cython cimport address
 from libcpp.string cimport string
@@ -12,14 +13,21 @@ from ecell4.core cimport *
 #  a python wrapper for Cpp_BDWorld
 cdef class BDWorld:
 
-    def __cinit__(self, Position3 edge_lengths,
-        GSLRandomNumberGenerator rng = None):
-        if rng is None:
-            self.thisptr = new shared_ptr[Cpp_BDWorld](
-                new Cpp_BDWorld(deref(edge_lengths.thisptr)))
+    def __cinit__(self, edge_lengths = None, GSLRandomNumberGenerator rng = None):
+        cdef string filename
+
+        if edge_lengths is None:
+            self.thisptr = new shared_ptr[Cpp_BDWorld](new Cpp_BDWorld())
+        elif rng is None:
+            if isinstance(edge_lengths, Real3):
+                self.thisptr = new shared_ptr[Cpp_BDWorld](
+                    new Cpp_BDWorld(deref((<Real3>edge_lengths).thisptr)))
+            else:
+                filename = edge_lengths
+                self.thisptr = new shared_ptr[Cpp_BDWorld](new Cpp_BDWorld(filename))
         else:
             self.thisptr = new shared_ptr[Cpp_BDWorld](
-                new Cpp_BDWorld(deref(edge_lengths.thisptr), deref(rng.thisptr)))
+                new Cpp_BDWorld(deref((<Real3>edge_lengths).thisptr), deref(rng.thisptr)))
 
     def __dealloc__(self):
         # XXX: Here, we release shared pointer,
@@ -27,7 +35,7 @@ cdef class BDWorld:
         #      it will be released automatically.
         del self.thisptr
 
-    def new_particle(self, arg1, Position3 arg2=None):
+    def new_particle(self, arg1, Real3 arg2=None):
         cdef pair[pair[Cpp_ParticleID, Cpp_Particle], bool] retval
 
         if arg2 is None:
@@ -43,8 +51,8 @@ cdef class BDWorld:
         return self.thisptr.get().t()
 
     def edge_lengths(self):
-        cdef Cpp_Position3 lengths = self.thisptr.get().edge_lengths()
-        return Position3_from_Cpp_Position3(address(lengths))
+        cdef Cpp_Real3 lengths = self.thisptr.get().edge_lengths()
+        return Real3_from_Cpp_Real3(address(lengths))
 
     def num_particles(self, Species sp = None):
         if sp is None:
@@ -106,7 +114,7 @@ cdef class BDWorld:
         self.thisptr.get().remove_particle(deref(pid.thisptr))
 
     def list_particles_within_radius(
-        self, Position3 pos, Real radius,
+        self, Real3 pos, Real radius,
         ParticleID ignore1 = None, ParticleID ignore2 = None):
         cdef vector[pair[pair[Cpp_ParticleID, Cpp_Particle], Real]] particles
         if ignore1 is None and ignore2 is None:
@@ -133,19 +141,19 @@ cdef class BDWorld:
             inc(it)
         return retval
 
-    def periodic_transpose(self, Position3 pos1, Position3 pos2):
-        cdef Cpp_Position3 newpos = self.thisptr.get().periodic_transpose(
+    def periodic_transpose(self, Real3 pos1, Real3 pos2):
+        cdef Cpp_Real3 newpos = self.thisptr.get().periodic_transpose(
             deref(pos1.thisptr), deref(pos2.thisptr))
-        return Position3_from_Cpp_Position3(address(newpos))
+        return Real3_from_Cpp_Real3(address(newpos))
 
-    def apply_boundary(self, Position3 pos):
-        cdef Cpp_Position3 newpos = self.thisptr.get().apply_boundary(deref(pos.thisptr))
-        return Position3_from_Cpp_Position3(address(newpos))
+    def apply_boundary(self, Real3 pos):
+        cdef Cpp_Real3 newpos = self.thisptr.get().apply_boundary(deref(pos.thisptr))
+        return Real3_from_Cpp_Real3(address(newpos))
 
-    def distance_sq(self, Position3 pos1, Position3 pos2):
+    def distance_sq(self, Real3 pos1, Real3 pos2):
         return self.thisptr.get().distance_sq(deref(pos1.thisptr), deref(pos2.thisptr))
 
-    def distance(self, Position3 pos1, Position3 pos2):
+    def distance(self, Real3 pos1, Real3 pos2):
         return self.thisptr.get().distance(deref(pos1.thisptr), deref(pos2.thisptr))
 
     def volume(self):
@@ -163,8 +171,15 @@ cdef class BDWorld:
     # def add_species(self, Species sp):
     #     self.thisptr.get().add_species(deref(sp.thisptr))
 
-    def add_molecules(self, Species sp, Integer num):
-        self.thisptr.get().add_molecules(deref(sp.thisptr), num)
+    # def add_molecules(self, Species sp, Integer num):
+    #     self.thisptr.get().add_molecules(deref(sp.thisptr), num)
+
+    def add_molecules(self, Species sp, Integer num, shape=None):
+        if shape is None:
+            self.thisptr.get().add_molecules(deref(sp.thisptr), num)
+        else:
+            self.thisptr.get().add_molecules(
+                deref(sp.thisptr), num, deref((<Shape>(shape.as_base())).thisptr))
 
     def remove_molecules(self, Species sp, Integer num):
         self.thisptr.get().remove_molecules(deref(sp.thisptr), num)
@@ -176,23 +191,22 @@ cdef class BDWorld:
         self.thisptr.get().load(filename)
 
     def bind_to(self, m):
-        if isinstance(m, NetworkModel):
-            self.thisptr.get().bind_to(
-                <shared_ptr[Cpp_Model]>deref((<NetworkModel>m).thisptr))
-        elif isinstance(m, NetfreeModel):
-            self.thisptr.get().bind_to(
-                <shared_ptr[Cpp_Model]>deref((<NetfreeModel>m).thisptr))
-        else:
-            raise ValueError, ("a wrong argument was given [%s]." % (type(m))
-                + " the argument must be NetworkModel or NetfreeModel")
+        self.thisptr.get().bind_to(deref(Cpp_Model_from_Model(m)))
 
     def rng(self):
         return GSLRandomNumberGenerator_from_Cpp_RandomNumberGenerator(
             self.thisptr.get().rng())
 
+    def as_base(self):
+        retval = Space()
+        del retval.thisptr
+        retval.thisptr = new shared_ptr[Cpp_Space](
+            <shared_ptr[Cpp_Space]>deref(self.thisptr))
+        return retval
+
 cdef BDWorld BDWorld_from_Cpp_BDWorld(
     shared_ptr[Cpp_BDWorld] w):
-    r = BDWorld(Position3(1, 1, 1))
+    r = BDWorld(Real3(1, 1, 1))
     r.thisptr.swap(w)
     return r
 
@@ -200,9 +214,13 @@ cdef BDWorld BDWorld_from_Cpp_BDWorld(
 #  a python wrapper for Cpp_BDSimulator
 cdef class BDSimulator:
 
-    def __cinit__(self, NetworkModel m, BDWorld w):
-        self.thisptr = new Cpp_BDSimulator(
-            <shared_ptr[Cpp_Model]>deref(m.thisptr), deref(w.thisptr))
+    def __cinit__(self, m, BDWorld w=None):
+        if w is None:
+            self.thisptr = new Cpp_BDSimulator(
+                deref((<BDWorld>m).thisptr))
+        else:
+            self.thisptr = new Cpp_BDSimulator(
+                deref(Cpp_Model_from_Model(m)), deref(w.thisptr))
 
     def __dealloc__(self):
         del self.thisptr
@@ -252,7 +270,48 @@ cdef class BDSimulator:
 
         if observers is None:
             self.thisptr.run(duration)
-        else:
+        elif isinstance(observers, collections.Iterable):
             for obs in observers:
                 tmp.push_back(deref((<Observer>(obs.as_base())).thisptr))
             self.thisptr.run(duration, tmp)
+        else:
+            self.thisptr.run(duration,
+                deref((<Observer>(observers.as_base())).thisptr))
+
+cdef BDSimulator BDSimulator_from_Cpp_BDSimulator(Cpp_BDSimulator* s):
+    r = BDSimulator(
+        Model_from_Cpp_Model(s.model()), BDWorld_from_Cpp_BDWorld(s.world()))
+    del r.thisptr
+    r.thisptr = s
+    return r
+
+## BDFactory
+#  a python wrapper for Cpp_BDFactory
+cdef class BDFactory:
+
+    def __cinit__(self, GSLRandomNumberGenerator rng=None):
+        if rng is None:
+            self.thisptr = new Cpp_BDFactory()
+        else:
+            self.thisptr = new Cpp_BDFactory(deref(rng.thisptr))
+
+    def __dealloc__(self):
+        del self.thisptr
+
+    def create_world(self, arg1):
+        if isinstance(arg1, Real3):
+            return BDWorld_from_Cpp_BDWorld(
+                shared_ptr[Cpp_BDWorld](
+                    self.thisptr.create_world(deref((<Real3>arg1).thisptr))))
+        else:
+            return BDWorld_from_Cpp_BDWorld(
+                shared_ptr[Cpp_BDWorld](self.thisptr.create_world(<string>(arg1))))
+
+    def create_simulator(self, arg1, BDWorld arg2=None):
+        if arg2 is None:
+            return BDSimulator_from_Cpp_BDSimulator(
+                self.thisptr.create_simulator(deref((<BDWorld>arg1).thisptr)))
+        else:
+            return BDSimulator_from_Cpp_BDSimulator(
+                self.thisptr.create_simulator(
+                    deref(Cpp_Model_from_Model(arg1)), deref(arg2.thisptr)))

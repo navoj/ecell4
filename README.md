@@ -38,7 +38,14 @@ pip install http://dev.e-cell.org/downloads/ecell4/mac/mavericks/latest/ecell4-0
 # pip install http://dev.e-cell.org/downloads/ecell4/mac/mountainlion/latest/ecell4-0.0.0-cp27-none-macosx_10_8_intel.whl
 ```
 
-## Building and installing Ubuntu 14.04
+## Installing E-Cell (Ubuntu 14.04)
+
+```shell
+$ sudo apt-get install python-pip libgsl0-dev libhdf5-serial-dev libboost-dev
+$ sudo pip install http://dev.e-cell.org/downloads/ecell4/ubuntu-trusty-amd64/latest/ecell4-0.0.0-cp27-none-linux_x86_64.whl
+```
+
+## Building and installing E-Cell (Ubuntu 14.04)
 
 ```shell
 # dependent packages
@@ -77,8 +84,8 @@ The latest version of boot2docker sets up a host only network adaptor which prov
 ```shell
 $ boot2docker ssh
 ######## in boot2docker
-docker@boot2docker:~$ docker pull ecell/ecell4:latest
-docker@boot2docker:~$ docker run --rm -i -t -p 8888:8888 ecell/ecell4:latest
+docker@boot2docker:~$ docker pull ecell/ecell4:develop
+docker@boot2docker:~$ docker run --rm -i -t -p 8888:8888 ecell/ecell4:develop
 ```
 
 Then you should be able to access the E-Cell4 IPython notebook server using the IP address reported to you using:
@@ -93,8 +100,8 @@ Typically, it is 192.168.59.103, so please open 192.168.59.103:8888 with your fa
 ### Docker (Linux)
 
 ```shell
-$ sudo docker pull ecell4/ecell4:latest
-$ sudo docker run --rm -i -t -p 8888:8888 ecell/ecell4:latest
+$ sudo docker pull ecell4/ecell4:develop
+$ sudo docker run --rm -i -t -p 8888:8888 ecell/ecell4:develop
 ```
 
 Open localhost:8888 with your favorite browser.
@@ -105,4 +112,4 @@ Open localhost:8888 with your favorite browser.
 
 ## IPython notebooks (tutorials) for E-Cell4
 
-Please see http://nbviewer.ipython.org/github/ecell/ecell4/blob/master/ipynb/index.ipynb
+Please see http://nbviewer.ipython.org/github/ecell/ecell4/blob/develop/ipynb/index.ipynb

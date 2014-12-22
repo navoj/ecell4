@@ -13,6 +13,7 @@
 #include <ecell4/core/CompartmentSpace.hpp>
 #include <ecell4/core/CompartmentSpaceHDF5Writer.hpp>
 #include <ecell4/core/NetworkModel.hpp>
+#include <ecell4/core/Shape.hpp>
 
 
 namespace ecell4
@@ -26,14 +27,14 @@ class GillespieWorld
 {
 public:
 
-    GillespieWorld(const Position3& edge_lengths,
+    GillespieWorld(const Real3& edge_lengths,
                    boost::shared_ptr<RandomNumberGenerator> rng)
         : cs_(new CompartmentSpaceVectorImpl(edge_lengths)), rng_(rng)
     {
         ;
     }
 
-    GillespieWorld(const Position3& edge_lengths)
+    GillespieWorld(const Real3& edge_lengths = Real3(1, 1, 1))
         : cs_(new CompartmentSpaceVectorImpl(edge_lengths))
     {
         rng_ = boost::shared_ptr<RandomNumberGenerator>(
@@ -41,19 +42,27 @@ public:
         (*rng_).seed();
     }
 
+    GillespieWorld(const std::string filename)
+        : cs_(new CompartmentSpaceVectorImpl(Real3(1, 1, 1)))
+    {
+        rng_ = boost::shared_ptr<RandomNumberGenerator>(
+            new GSLRandomNumberGenerator());
+        this->load(filename);
+    }
+
     // SpaceTraits
 
     const Real& t(void) const;
     void set_t(const Real& t);
 
-    const Position3& edge_lengths() const
+    const Real3& edge_lengths() const
     {
         return cs_->edge_lengths();
     }
 
-    void set_edge_lengths(const Position3& edge_lengths)
+    void reset(const Real3& edge_lengths)
     {
-        cs_->set_edge_lengths(edge_lengths);
+        cs_->reset(edge_lengths);
     }
 
     // CompartmentSpaceTraits
@@ -65,6 +74,8 @@ public:
 
     Integer num_molecules(const Species& sp) const;
     Integer num_molecules_exact(const Species& sp) const;
+    Real get_value(const Species& sp) const;
+    Real get_value_exact(const Species& sp) const;
     std::vector<Species> list_species() const;
     bool has_species(const Species& sp) const;
 
@@ -120,6 +131,11 @@ public:
     boost::shared_ptr<Model> lock_model() const
     {
         return model_.lock();
+    }
+
+    void add_molecules(const Species& sp, const Integer& num, const Shape& shape)
+    {
+        add_molecules(sp, num);
     }
 
 private:

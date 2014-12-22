@@ -7,33 +7,37 @@
 #include <stdexcept>
 
 #include "Space.hpp"
-#include "Global.hpp"
+#include "Integer3.hpp"
 #include "LatticeSpaceHDF5Writer.hpp"
+#include "MolecularTypeBase.hpp"
+#include "MolecularType.hpp"
 
 
 namespace ecell4
 {
 
-class MolecularTypeBase;
-class MolecularType;
-
 class LatticeSpace
     : public Space
 {
-protected:
+public:
+
+    typedef MolecularTypeBase::particle_info particle_info;
+    typedef MolecularTypeBase::private_coordinate_type private_coordinate_type;
+    typedef private_coordinate_type coordinate_type;
+
+    typedef std::map<Species, MolecularType> spmap;
+
+    // typedef Integer coordinate_type;
+    // typedef coordinate_type private_coordinate_type;
+    // typedef std::pair<private_coordinate_type, ParticleID> particle_info;
+
 
     typedef std::vector<MolecularTypeBase*> voxel_container;
 
 public:
 
-    typedef std::map<Species, MolecularType> spmap;
-    typedef Integer coordinate_type;
-    typedef coordinate_type private_coordinate_type;
-
-    typedef std::pair<private_coordinate_type, ParticleID> particle_info;
-
     LatticeSpace(
-        const Position3& edge_lengths, const Real& voxel_radius,
+        const Real3& edge_lengths, const Real& voxel_radius,
         const bool is_periodic = true);
     ~LatticeSpace();
 
@@ -57,7 +61,7 @@ public:
         t_ = t;
     }
 
-    const Position3& edge_lengths() const;
+    const Real3& edge_lengths() const;
 
     const Real volume() const
     {
@@ -71,6 +75,16 @@ public:
     Integer num_particles() const;
     Integer num_particles(const Species& sp) const;
     Integer num_particles_exact(const Species& sp) const;
+
+    virtual Real get_value(const Species& sp) const
+    {
+        return static_cast<Real>(num_molecules(sp));
+    }
+
+    virtual Real get_value_exact(const Species& sp) const
+    {
+        return static_cast<Real>(num_molecules_exact(sp));
+    }
 
     bool has_species(const Species& sp) const;
     // bool has_species_exact(const Species& sp) const;
@@ -90,6 +104,7 @@ public:
     bool remove_voxel_private(const private_coordinate_type coord);
 
     bool update_particle(const ParticleID& pid, const Particle& p);
+    bool update_structure(const Particle& p);
 
     /*
      * for Simulator
@@ -111,16 +126,24 @@ public:
     bool update_voxel_private(const ParticleID& pid, const Voxel& v);
 
     std::vector<Species> list_species() const;
+    const Species& find_species(std::string name) const;
     std::vector<coordinate_type> list_coords(const Species& sp) const;
     std::vector<coordinate_type> list_coords_exact(const Species& sp) const;
     MolecularTypeBase* find_molecular_type(const Species& sp);
+    // MolecularTypeBase* find_molecular_type(const std::string name);
     MolecularTypeBase* get_molecular_type(private_coordinate_type coord) const;
     // bool register_species(const Species& sp);
     // bool update_molecule(private_coordinate_type coord, const Species& species);
     // bool add_molecule(const Species& sp, private_coordinate_type coord, const ParticleID& pid);
     bool move(coordinate_type from, coordinate_type to);
-    std::pair<private_coordinate_type, bool> move_to_neighbor(private_coordinate_type coord, Integer nrand);
-    std::pair<private_coordinate_type, bool> move_to_neighbor(particle_info& info, Integer nrand);
+
+    std::pair<private_coordinate_type, bool> move_to_neighbor(
+        private_coordinate_type coord, Integer nrand);
+    std::pair<private_coordinate_type, bool> move_to_neighbor(
+        particle_info& info, Integer nrand);
+    std::pair<private_coordinate_type, bool> move_to_neighbor(
+        MolecularTypeBase* const& from_mt, MolecularTypeBase* const& loc,
+        particle_info& info, const Integer nrand);
 
     inline bool is_periodic() const
     {
@@ -165,7 +188,7 @@ public:
         load_lattice_space(root, this);
     }
 
-    void cleanup(const Position3& edge_lengths, const Real& voxel_radius,
+    void reset(const Real3& edge_lengths, const Real& voxel_radius,
         const bool is_periodic)
     {
         edge_lengths_ = edge_lengths;
@@ -180,17 +203,22 @@ public:
     /*
      * Coordinate transformations
      */
-    coordinate_type global2coord(const Global& global) const;
-    coordinate_type global2private_coord(const Global& global) const;
-    const Global coord2global(coordinate_type coord) const;
-    const Global private_coord2global(private_coordinate_type coord) const;
+    coordinate_type global2coord(const Integer3& global) const;
+    coordinate_type global2private_coord(const Integer3& global) const;
+    const Integer3 coord2global(coordinate_type coord) const;
+    const Integer3 private_coord2global(private_coordinate_type coord) const;
 
     private_coordinate_type coord2private(coordinate_type cood) const;
     coordinate_type private2coord(private_coordinate_type private_coord) const;
 
-    const Position3 coordinate2position(coordinate_type coord) const;
-    coordinate_type position2coordinate(const Position3& pos) const;
+    const Real3 coordinate2position(coordinate_type coord) const;
+    coordinate_type position2coordinate(const Real3& pos) const;
 
+    const Real3 private2position(private_coordinate_type private_coord) const;
+    private_coordinate_type position2private(const Real3& pos) const;
+
+    std::vector<private_coordinate_type> get_neighbors(
+            private_coordinate_type coord) const;
     private_coordinate_type get_neighbor(
             private_coordinate_type private_coord, Integer nrand) const;
 
@@ -199,28 +227,29 @@ public:
     /*
      * Coordinate transformations
      */
-    private_coordinate_type global2coord_(const Global& global,
+    private_coordinate_type global2coord_(const Integer3& global,
             Integer col_size, Integer row_size, Integer layer_size) const;
-    const Global coord2global_(coordinate_type coord,
+    const Integer3 coord2global_(coordinate_type coord,
             Integer col_size, Integer row_size, Integer layer_size) const;
 
-    const Global private_coord2private_global(
+    const Integer3 private_coord2private_global(
             const private_coordinate_type privatre_coord) const;
-    const private_coordinate_type private_global2private_coord(
-            const Global private_global) const;
 
-    const Position3 global2position(const Global& global) const;
-    const Global position2global(const Position3& pos) const;
+    const Real3 global2position(const Integer3& global) const;
+    const Integer3 position2global(const Real3& pos) const;
 
     private_coordinate_type apply_boundary_(
             const private_coordinate_type& private_coord) const;
 
-    private_coordinate_type position2private_coord(const Position3& pos) const;
 
     const spmap& molecular_types() const
     {
         return spmap_;
     }
+
+    bool is_inside(private_coordinate_type coord) const;
+
+    bool on_structure(const Voxel& v);
 
 protected:
 
@@ -240,7 +269,7 @@ protected:
 protected:
 
     Real voxel_radius_;
-    Position3 edge_lengths_;
+    Real3 edge_lengths_;
     Real t_;
     bool is_periodic_;
 

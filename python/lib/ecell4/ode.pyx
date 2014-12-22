@@ -1,3 +1,4 @@
+import collections
 from cython.operator cimport dereference as deref, preincrement as inc
 from cython cimport address
 from libcpp.string cimport string
@@ -11,10 +12,17 @@ from ecell4.core cimport *
 #  a python wrapper for Cpp_ODEWorld
 cdef class ODEWorld:
 
-    def __cinit__(self, Position3 edge_lengths):
-        # XXX: GSLRandomNumberGenerator -> RandomNumberGenerator
-        self.thisptr = new shared_ptr[Cpp_ODEWorld](
-            new Cpp_ODEWorld(deref(edge_lengths.thisptr)))
+    def __cinit__(self, edge_lengths = None):
+        cdef string filename
+
+        if edge_lengths is None:
+            self.thisptr = new shared_ptr[Cpp_ODEWorld](new Cpp_ODEWorld())
+        elif isinstance(edge_lengths, Real3):
+            self.thisptr = new shared_ptr[Cpp_ODEWorld](
+                new Cpp_ODEWorld(deref((<Real3>edge_lengths).thisptr)))
+        else:
+            filename = edge_lengths
+            self.thisptr = new shared_ptr[Cpp_ODEWorld](new Cpp_ODEWorld(filename))
 
     def __dealloc__(self):
         # XXX: Here, we release shared pointer,
@@ -29,8 +37,8 @@ cdef class ODEWorld:
         return self.thisptr.get().t()
 
     def edge_lengths(self):
-        cdef Cpp_Position3 lengths = self.thisptr.get().edge_lengths()
-        return Position3_from_Cpp_Position3(address(lengths))
+        cdef Cpp_Real3 lengths = self.thisptr.get().edge_lengths()
+        return Real3_from_Cpp_Real3(address(lengths))
 
     def volume(self):
         return self.thisptr.get().volume()
@@ -54,10 +62,14 @@ cdef class ODEWorld:
     def set_volume(self, Real vol):
         self.thisptr.get().set_volume(vol)
 
-    def add_molecules(self, Species sp, Real num):
-        self.thisptr.get().add_molecules(deref(sp.thisptr), num)
+    def add_molecules(self, Species sp, Integer num, shape=None):
+        if shape is None:
+            self.thisptr.get().add_molecules(deref(sp.thisptr), num)
+        else:
+            self.thisptr.get().add_molecules(
+                deref(sp.thisptr), num, deref((<Shape>(shape.as_base())).thisptr))
 
-    def remove_molecules(self, Species sp, Real num):
+    def remove_molecules(self, Species sp, Integer num):
         self.thisptr.get().remove_molecules(deref(sp.thisptr), num)
 
     def get_value(self, Species sp):
@@ -81,12 +93,19 @@ cdef class ODEWorld:
     def release_species(self, Species sp):
         self.thisptr.get().release_species(deref(sp.thisptr))
 
-    def bind_to(self, NetworkModel m):
-        self.thisptr.get().bind_to(deref(m.thisptr))
+    def bind_to(self, m):
+        self.thisptr.get().bind_to(deref(Cpp_Model_from_Model(m)))
+
+    def as_base(self):
+        retval = Space()
+        del retval.thisptr
+        retval.thisptr = new shared_ptr[Cpp_Space](
+            <shared_ptr[Cpp_Space]>deref(self.thisptr))
+        return retval
 
 cdef ODEWorld ODEWorld_from_Cpp_ODEWorld(
     shared_ptr[Cpp_ODEWorld] w):
-    r = ODEWorld(Position3(1, 1, 1))
+    r = ODEWorld(Real3(1, 1, 1))
     r.thisptr.swap(w)
     return r
 
@@ -94,9 +113,13 @@ cdef ODEWorld ODEWorld_from_Cpp_ODEWorld(
 #  a python wrapper for Cpp_ODESimulator
 cdef class ODESimulator:
 
-    def __cinit__(self, NetworkModel m, ODEWorld w):
-        self.thisptr = new Cpp_ODESimulator(
-            deref(m.thisptr), deref(w.thisptr))
+    def __cinit__(self, m, ODEWorld w=None):
+        if w is None:
+            self.thisptr = new Cpp_ODESimulator(
+                deref((<ODEWorld>m).thisptr))
+        else:
+            self.thisptr = new Cpp_ODESimulator(
+                deref(Cpp_Model_from_Model(m)), deref(w.thisptr))
 
     def __dealloc__(self):
         del self.thisptr
@@ -139,7 +162,7 @@ cdef class ODESimulator:
         return retval
 
     def model(self):
-        return NetworkModel_from_Cpp_NetworkModel(self.thisptr.model())
+        return Model_from_Cpp_Model(self.thisptr.model())
 
     def world(self):
         return ODEWorld_from_Cpp_ODEWorld(self.thisptr.world())
@@ -149,7 +172,46 @@ cdef class ODESimulator:
 
         if observers is None:
             self.thisptr.run(duration)
-        else:
+        elif isinstance(observers, collections.Iterable):
             for obs in observers:
                 tmp.push_back(deref((<Observer>(obs.as_base())).thisptr))
             self.thisptr.run(duration, tmp)
+        else:
+            self.thisptr.run(duration,
+                deref((<Observer>(observers.as_base())).thisptr))
+
+cdef ODESimulator ODESimulator_from_Cpp_ODESimulator(Cpp_ODESimulator* s):
+    r = ODESimulator(
+        Model_from_Cpp_Model(s.model()),
+        ODEWorld_from_Cpp_ODEWorld(s.world()))
+    del r.thisptr
+    r.thisptr = s
+    return r
+
+## ODEFactory
+#  a python wrapper for Cpp_ODEFactory
+cdef class ODEFactory:
+
+    def __cinit__(self):
+        self.thisptr = new Cpp_ODEFactory()
+
+    def __dealloc__(self):
+        del self.thisptr
+
+    def create_world(self, arg1):
+        if isinstance(arg1, Real3):
+            return ODEWorld_from_Cpp_ODEWorld(
+                shared_ptr[Cpp_ODEWorld](
+                    self.thisptr.create_world(deref((<Real3>arg1).thisptr))))
+        else:
+            return ODEWorld_from_Cpp_ODEWorld(
+                shared_ptr[Cpp_ODEWorld](self.thisptr.create_world(<string>(arg1))))
+
+    def create_simulator(self, arg1, ODEWorld arg2=None):
+        if arg2 is None:
+            return ODESimulator_from_Cpp_ODESimulator(
+                self.thisptr.create_simulator(deref((<ODEWorld>arg1).thisptr)))
+        else:
+            return ODESimulator_from_Cpp_ODESimulator(
+                self.thisptr.create_simulator(
+                    deref(Cpp_Model_from_Model(arg1)), deref(arg2.thisptr)))

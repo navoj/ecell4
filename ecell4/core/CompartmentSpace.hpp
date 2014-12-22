@@ -46,15 +46,15 @@ public:
 
     // CompartmentSpaceTraits
 
-    virtual const Position3& edge_lengths() const
+    virtual const Real3& edge_lengths() const
     {
         throw NotImplemented("edge_lengths() not implemented");
     }
 
-    virtual void set_edge_lengths(const Position3& edge_lengths)
+    virtual void reset(const Real3& edge_lengths)
     {
         throw NotImplemented(
-            "set_edge_lengths(const Position3&) not implemented");
+            "reset(const Real3&) not implemented");
     }
 
     /**
@@ -81,6 +81,16 @@ public:
     virtual Integer num_molecules_exact(const Species& sp) const
     {
         throw NotImplemented("num_molecules_exact(const Species&) not implemented");
+    }
+
+    virtual Real get_value(const Species& sp) const
+    {
+        return static_cast<Real>(num_molecules(sp));
+    }
+
+    virtual Real get_value_exact(const Species& sp) const
+    {
+        return static_cast<Real>(num_molecules_exact(sp));
     }
 
     /**
@@ -138,6 +148,7 @@ class CompartmentSpaceVectorImpl
 {
 protected:
 
+    typedef CompartmentSpace base_type;
     typedef std::vector<Integer> num_molecules_container_type;
     typedef std::vector<Species> species_container_type;
     typedef utils::get_mapper_mf<
@@ -145,19 +156,24 @@ protected:
 
 public:
 
-    CompartmentSpaceVectorImpl(const Position3& edge_lengths)
+    CompartmentSpaceVectorImpl(const Real3& edge_lengths)
     {
-        set_edge_lengths(edge_lengths);
+        reset(edge_lengths);
     }
 
-    const Position3& edge_lengths() const
+    const Real3& edge_lengths() const
     {
         return edge_lengths_;
     }
 
-    void set_edge_lengths(const Position3& edge_lengths)
+    void reset(const Real3& edge_lengths)
     {
-        for (Position3::size_type dim(0); dim < 3; ++dim)
+        base_type::t_ = 0.0;
+        index_map_.clear();
+        num_molecules_.clear();
+        species_.clear();
+
+        for (Real3::size_type dim(0); dim < 3; ++dim)
         {
             if (edge_lengths[dim] <= 0)
             {
@@ -195,7 +211,6 @@ public:
     void load(const H5::Group& root)
     {
         typedef CompartmentSpaceHDF5Traits<CompartmentSpaceVectorImpl> traits_type;
-        clear();
         load_compartment_space<traits_type>(root, this);
     }
 
@@ -203,11 +218,10 @@ protected:
 
     void reserve_species(const Species& sp);
     void release_species(const Species& sp);
-    void clear();
 
 protected:
 
-    Position3 edge_lengths_;
+    Real3 edge_lengths_;
     Real volume_;
 
     num_molecules_container_type num_molecules_;

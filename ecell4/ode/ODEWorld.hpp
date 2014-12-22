@@ -2,10 +2,12 @@
 #define __ECELL4_ODE_ODE_WORLD_HPP
 
 #include <ecell4/core/Species.hpp>
-#include <ecell4/core/Position3.hpp>
+#include <ecell4/core/Context.hpp>
+#include <ecell4/core/Real3.hpp>
 #include <ecell4/core/Space.hpp>
-#include <ecell4/core/NetworkModel.hpp>
+#include <ecell4/core/Model.hpp>
 #include <ecell4/core/CompartmentSpaceHDF5Writer.hpp>
+#include <ecell4/core/Shape.hpp>
 
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
@@ -26,7 +28,7 @@ struct ODEWorldHDF5Traits
 
     num_molecules_type getter(const space_type& space, const Species& sp) const
     {
-        return space.get_value(sp);
+        return space.get_value_exact(sp);
     }
 
     void setter(
@@ -48,10 +50,17 @@ protected:
 
 public:
 
-    ODEWorld(const Position3& edge_lengths)
+    ODEWorld(const Real3& edge_lengths = Real3(1, 1, 1))
         : t_(0.0)
     {
-        set_edge_lengths(edge_lengths);
+        reset(edge_lengths);
+    }
+
+    ODEWorld(const std::string& filename)
+        : t_(0.0)
+    {
+        reset(Real3(1, 1, 1));
+        this->load(filename);
     }
 
     // SpaceTraits
@@ -70,14 +79,19 @@ public:
         t_ = t;
     }
 
-    const Position3& edge_lengths() const
+    const Real3& edge_lengths() const
     {
         return edge_lengths_;
     }
 
-    void set_edge_lengths(const Position3& edge_lengths)
+    void reset(const Real3& edge_lengths)
     {
-        for (Position3::size_type dim(0); dim < 3; ++dim)
+        t_ = 0.0;
+        index_map_.clear();
+        num_molecules_.clear();
+        species_.clear();
+
+        for (Real3::size_type dim(0); dim < 3; ++dim)
         {
             if (edge_lengths[dim] <= 0)
             {
@@ -103,32 +117,19 @@ public:
 
         volume_ = volume;
         const Real L(cbrt(volume));
-        edge_lengths_ = Position3(L, L, L);
+        edge_lengths_ = Real3(L, L, L);
     }
 
     // CompartmentSpaceTraits
 
     Integer num_molecules(const Species& sp) const
     {
-        SpeciesExpressionMatcher sexp(sp);
-        Real retval(0);
-        for (species_map_type::const_iterator i(index_map_.begin());
-            i != index_map_.end(); ++i)
-        {
-            if (sexp.match((*i).first))
-            {
-                do
-                {
-                    retval += num_molecules_[(*i).second];
-                } while (sexp.next());
-            }
-        }
-        return static_cast<Integer>(retval);
+        return static_cast<Integer>(get_value(sp));
     }
 
     Integer num_molecules_exact(const Species& sp) const
     {
-        return static_cast<Integer>(get_value(sp));
+        return static_cast<Integer>(get_value_exact(sp));
     }
 
     std::vector<Species> list_species() const
@@ -164,6 +165,24 @@ public:
     // Optional members
 
     Real get_value(const Species& sp) const
+    {
+        SpeciesExpressionMatcher sexp(sp);
+        Real retval(0);
+        for (species_map_type::const_iterator i(index_map_.begin());
+            i != index_map_.end(); ++i)
+        {
+            if (sexp.match((*i).first))
+            {
+                do
+                {
+                    retval += num_molecules_[(*i).second];
+                } while (sexp.next());
+            }
+        }
+        return retval;
+    }
+
+    Real get_value_exact(const Species& sp) const
     {
         species_map_type::const_iterator i(index_map_.find(sp));
         if (i == index_map_.end())
@@ -235,9 +254,9 @@ public:
         index_map_.erase(sp);
     }
 
-    void bind_to(boost::shared_ptr<NetworkModel> model)
+    void bind_to(boost::shared_ptr<Model> model)
     {
-        if (boost::shared_ptr<NetworkModel> bound_model = lock_model())
+        if (boost::shared_ptr<Model> bound_model = lock_model())
         {
             if (bound_model.get() != model.get())
             {
@@ -248,23 +267,19 @@ public:
         this->model_ = model;
     }
 
-    boost::shared_ptr<NetworkModel> lock_model() const
+    boost::shared_ptr<Model> lock_model() const
     {
         return model_.lock();
     }
 
-protected:
-
-    void clear()
+    void add_molecules(const Species& sp, const Integer& num, const Shape& shape)
     {
-        index_map_.clear();
-        num_molecules_.clear();
-        species_.clear();
+        add_molecules(sp, num);
     }
 
 protected:
 
-    Position3 edge_lengths_;
+    Real3 edge_lengths_;
     Real volume_;
     Real t_;
 
@@ -272,7 +287,8 @@ protected:
     species_container_type species_;
     species_map_type index_map_;
 
-    boost::weak_ptr<NetworkModel> model_;
+    boost::weak_ptr<Model> model_;
+    bool is_netfree_;
 };
 
 } // ode

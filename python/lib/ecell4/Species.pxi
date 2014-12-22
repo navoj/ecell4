@@ -11,11 +11,11 @@ cdef class Species:
     def __cinit__(self, serial=None, radius=None, D=None):
         if serial is None:
             self.thisptr = new Cpp_Species()
-        elif radius is None or D is None:
-            self.thisptr = new Cpp_Species(<string> serial)
-        else:
+        elif radius is not None and D is not None:
             self.thisptr = new Cpp_Species(
-                <string> serial, <string> radius, <string> D)
+                <string>serial, <string>radius, <string>D)
+        else:
+            self.thisptr = new Cpp_Species(<string>serial) #XXX:
 
     def __dealloc__(self):
         del self.thisptr
@@ -54,11 +54,22 @@ cdef class Species:
     def add_unit(self, UnitSpecies usp):
         self.thisptr.add_unit(deref(usp.thisptr))
 
-    # def match(self, Species rhs):
-    #     return self.thisptr.match(deref(rhs.thisptr))
+    def count(self, Species pttrn):
+        return self.thisptr.count(deref(pttrn.thisptr))
 
     # def get_unit(self, UnitSpecies usp):
     #     return self.thisptr.get_unit(deref(usp.thisptr))
+
+    def units(self):
+        cdef vector[Cpp_UnitSpecies] usps = self.thisptr.units()
+        retval = []
+        cdef vector[Cpp_UnitSpecies].iterator it = usps.begin()
+        while it != usps.end():
+            retval.append(UnitSpecies_from_Cpp_UnitSpecies(
+            <Cpp_UnitSpecies*>(address(deref(it)))))
+            inc(it)
+
+        return retval
 
     def num_units(self):
         return self.thisptr.num_units()
@@ -108,4 +119,3 @@ def rrgenerate(ReactionRule pttrn, reactants):
             inc(it2)
         inc(it1)
     return retval
-

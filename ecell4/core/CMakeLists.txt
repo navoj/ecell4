@@ -5,20 +5,25 @@
 # INCLUDE(CPack)
 
 set(CPP_FILES
-    CompartmentSpace.cpp Context.cpp Global.cpp Journal.cpp
+    CompartmentSpace.cpp Context.cpp Integer3.cpp Journal.cpp ReactionRule.cpp
     LatticeSpace.cpp Model.cpp NetworkModel.cpp NetfreeModel.cpp ParticleSpace.cpp
-    Position3.cpp RandomNumberGenerator.cpp Species.cpp UnitSpecies.cpp)
+    Real3.cpp RandomNumberGenerator.cpp Species.cpp UnitSpecies.cpp
+    Sphere.cpp Cylinder.cpp SubvolumeSpace.cpp ParticleSpaceCellListImpl.cpp)
 
 set(HPP_FILES
     CompartmentSpace.hpp DynamicPriorityQueue.hpp LatticeSpace.hpp
-    MolecularType.hpp Particle.hpp Position3.hpp ReactionRule.hpp Space.hpp
+	MolecularType.hpp Particle.hpp Real3.hpp ReactionRule.hpp Space.hpp Ratelaw.hpp
     VacantType.hpp extras.hpp linear_algebra.hpp CompartmentSpaceHDF5Writer.hpp
     EventScheduler.hpp Identifier.hpp LatticeSpaceHDF5Writer.hpp
+    SubvolumeSpace.hpp SubvolumeSpaceHDF5Writer.hpp
     MolecularTypeBase.hpp ParticleSpace.hpp RandomNumberGenerator.hpp
     SerialIDGenerator.hpp Species.hpp Voxel.hpp functions.hpp swap.hpp ModelWrapper.hpp
-    Context.hpp Global.hpp Journal.hpp Model.hpp NetworkModel.hpp NetfreeModel.hpp
+    Context.hpp Integer3.hpp Journal.hpp Model.hpp NetworkModel.hpp NetfreeModel.hpp
     ParticleSpaceHDF5Writer.hpp Reaction.hpp Simulator.hpp SimulatorBase.hpp
-    UnitSpecies.hpp Observer.hpp exceptions.hpp get_mapper_mf.hpp types.hpp)
+    UnitSpecies.hpp observers.hpp exceptions.hpp get_mapper_mf.hpp types.hpp
+    Shape.hpp Sphere.hpp Cylinder.hpp AABB.hpp StructureType.hpp
+    ParticleSpaceCellListImpl.hpp
+    comparators.hpp SimulatorFactory.hpp)
 
 find_package(HDF5 COMPONENTS C CXX HL REQUIRED)
 include_directories(${HDF5_INCLUDE_DIRS})

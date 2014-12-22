@@ -5,7 +5,7 @@
 
 #include "exceptions.hpp"
 #include "types.hpp"
-#include "Position3.hpp"
+#include "Real3.hpp"
 #include "Species.hpp"
 #include "Particle.hpp"
 
@@ -23,7 +23,8 @@ public:
         ELSE,
         PARTICLE,
         LATTICE,
-        COMPARTMENT
+        COMPARTMENT,
+        SUBVOLUME
     } space_kind;
 
 public:
@@ -109,14 +110,28 @@ public:
             " by this space class");
     }
 
+    virtual Real get_value(const Species& sp) const
+    {
+        throw NotSupported(
+            "get_value(const Species&) is not supported"
+            " by this space class");
+    }
+
+    virtual Real get_value_exact(const Species& sp) const
+    {
+        throw NotSupported(
+            "get_value_exact(const Species&) is not supported"
+            " by this space class");
+    }
+
     // ParticleSpaceTraits
 
     /**
      * get the axes lengths of a cuboidal region.
      * this function is a part of the trait of ParticleSpace.
-     * @return edge lengths Position3
+     * @return edge lengths Real3
      */
-    virtual const Position3& edge_lengths() const
+    virtual const Real3& edge_lengths() const
     {
         throw NotSupported(
             "edge_lengths() is not supported by this space class");
@@ -163,6 +178,13 @@ public:
     {
         throw NotSupported(
             "has_particle(const ParticleID&) is not supported"
+            " by this space class");
+    }
+
+    virtual std::pair<ParticleID, Particle> get_particle(const ParticleID& pid) const
+    {
+        throw NotSupported(
+            "get_particle(const ParticleID&) is not supported"
             " by this space class");
     }
 
