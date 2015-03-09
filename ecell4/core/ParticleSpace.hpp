@@ -11,8 +11,10 @@
 #include "Particle.hpp"
 #include "Species.hpp"
 #include "Space.hpp"
-#include "ParticleSpaceHDF5Writer.hpp"
 
+#ifdef WITH_HDF5
+#include "ParticleSpaceHDF5Writer.hpp"
+#endif
 
 namespace ecell4
 {
@@ -132,8 +134,27 @@ public:
         throw NotImplemented("has_particle(const ParticleID&) not implemented.");
     }
 
+    virtual std::vector<Species> list_species() const
+    {
+        const particle_container_type& pcont(particles());
+        std::vector<Species> retval;
+        for (particle_container_type::const_iterator i(pcont.begin());
+            i != pcont.end(); ++i)
+        {
+            const Species& sp((*i).second.species());
+            if (std::find(retval.begin(), retval.end(), sp)
+                == retval.end())
+            {
+                retval.push_back(sp);
+            }
+        }
+        return retval;
+    }
+
+#ifdef WITH_HDF5
     virtual void save(H5::Group* root) const = 0;
     virtual void load(const H5::Group& root) = 0;
+#endif
 
     // ParticleSpace member functions
 
@@ -317,7 +338,7 @@ public:
 protected:
 
     typedef utils::get_mapper_mf<
-    ParticleID, particle_container_type::size_type>::type particle_map_type;
+        ParticleID, particle_container_type::size_type>::type particle_map_type;
 
 public:
 
@@ -373,6 +394,7 @@ public:
         return particles_;
     }
 
+#ifdef WITH_HDF5
     void save(H5::Group* root) const
     {
         save_particle_space(*this, root);
@@ -382,6 +404,7 @@ public:
     {
         load_particle_space(root, this);
     }
+#endif
 
     void reset(const Real3& edge_lengths);
 

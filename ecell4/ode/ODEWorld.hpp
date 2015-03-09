@@ -6,7 +6,9 @@
 #include <ecell4/core/Real3.hpp>
 #include <ecell4/core/Space.hpp>
 #include <ecell4/core/Model.hpp>
+#ifdef WITH_HDF5
 #include <ecell4/core/CompartmentSpaceHDF5Writer.hpp>
+#endif
 #include <ecell4/core/Shape.hpp>
 
 #include <boost/shared_ptr.hpp>
@@ -18,6 +20,7 @@ namespace ecell4
 namespace ode
 {
 
+#ifdef WITH_HDF5
 template<typename Tspace_>
 struct ODEWorldHDF5Traits
     : public CompartmentSpaceHDF5TraitsBase<Tspace_, H5DataTypeTraits_double>
@@ -37,6 +40,7 @@ struct ODEWorldHDF5Traits
         space.set_value(sp, value);
     }
 };
+#endif
 
 class ODEWorld
     : public Space
@@ -272,7 +276,7 @@ public:
         return model_.lock();
     }
 
-    void add_molecules(const Species& sp, const Integer& num, const Shape& shape)
+    void add_molecules(const Species& sp, const Integer& num, const boost::shared_ptr<Shape> shape)
     {
         add_molecules(sp, num);
     }

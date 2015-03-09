@@ -9,6 +9,7 @@
 #include <ecell4/core/RandomNumberGenerator.hpp>
 #include <ecell4/core/SerialIDGenerator.hpp>
 #include <ecell4/core/ParticleSpace.hpp>
+#include <ecell4/core/ParticleSpaceCellListImpl.hpp>
 #include <ecell4/core/Model.hpp>
 
 
@@ -30,12 +31,15 @@ class BDWorld
 public:
 
     typedef MoleculeInfo molecule_info_type;
-    typedef ParticleSpace::particle_container_type particle_container_type;
+    typedef ParticleSpaceCellListImpl particle_space_type;
+    // typedef ParticleSpaceVectorImpl particle_space_type;
+    typedef particle_space_type::particle_container_type particle_container_type;
 
 public:
 
-    BDWorld(const Real3& edge_lengths = Real3(1, 1, 1))
-        : ps_(new ParticleSpaceVectorImpl(edge_lengths))
+    BDWorld(const Real3& edge_lengths = Real3(1, 1, 1),
+        const Integer3& matrix_sizes = Integer3(3, 3, 3))
+        : ps_(new particle_space_type(edge_lengths, matrix_sizes))
     {
         rng_ = boost::shared_ptr<RandomNumberGenerator>(
             new GSLRandomNumberGenerator());
@@ -43,15 +47,15 @@ public:
     }
 
     BDWorld(
-        const Real3& edge_lengths,
+        const Real3& edge_lengths, const Integer3& matrix_sizes,
         boost::shared_ptr<RandomNumberGenerator> rng)
-        : ps_(new ParticleSpaceVectorImpl(edge_lengths)), rng_(rng)
+        : ps_(new particle_space_type(edge_lengths, matrix_sizes)), rng_(rng)
     {
         ;
     }
 
     BDWorld(const std::string& filename)
-        : ps_(new ParticleSpaceVectorImpl(Real3(1, 1, 1)))
+        : ps_(new particle_space_type(Real3(1, 1, 1)))
     {
         rng_ = boost::shared_ptr<RandomNumberGenerator>(
             new GSLRandomNumberGenerator());
@@ -176,6 +180,11 @@ public:
         return (*ps_).list_particles_exact(sp);
     }
 
+    std::vector<Species> list_species() const
+    {
+        return (*ps_).list_species();
+    }
+
     // ParticleSpace member functions
 
     bool update_particle(const ParticleID& pid, const Particle& p)
@@ -262,7 +271,7 @@ public:
         extras::throw_in_particles(*this, sp, num, rng());
     }
 
-    void add_molecules(const Species& sp, const Integer& num, const Shape& shape)
+    void add_molecules(const Species& sp, const Integer& num, const boost::shared_ptr<Shape> shape)
     {
         extras::throw_in_particles(*this, sp, num, shape, rng());
     }
@@ -312,6 +321,7 @@ public:
 
     void save(const std::string& filename) const
     {
+#ifdef WITH_HDF5
         boost::scoped_ptr<H5::H5File>
             fout(new H5::H5File(filename.c_str(), H5F_ACC_TRUNC));
         rng_->save(fout.get());
@@ -319,16 +329,23 @@ public:
         boost::scoped_ptr<H5::Group>
             group(new H5::Group(fout->createGroup("ParticleSpace")));
         ps_->save(group.get());
+#else
+        throw NotSupported("not supported yet.");
+#endif
     }
 
     void load(const std::string& filename)
     {
+#ifdef WITH_HDF5
         boost::scoped_ptr<H5::H5File>
             fin(new H5::H5File(filename.c_str(), H5F_ACC_RDONLY));
         const H5::Group group(fin->openGroup("ParticleSpace"));
         ps_->load(group);
         pidgen_.load(*fin);
         rng_->load(*fin);
+#else
+        throw NotSupported("not supported yet.");
+#endif
     }
 
     void bind_to(boost::shared_ptr<Model> model)
