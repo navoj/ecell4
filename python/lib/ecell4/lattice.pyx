@@ -137,8 +137,8 @@ cdef class LatticeWorld:
             inc(it)
         return retval
 
-    # def get_neighbor(self, coord, nrand):
-    #     return self.thisptr.get().get_neighbor(coord, nrand)
+    def get_neighbor(self, coord, nrand):
+        return self.thisptr.get().get_neighbor(coord, nrand)
 
     def has_particle(self, ParticleID pid):
         return self.thisptr.get().has_particle(deref(pid.thisptr))
@@ -302,6 +302,10 @@ cdef class LatticeWorld:
 
     def size(self):
         return self.thisptr.get().size()
+
+    def shape(self):
+        cdef Cpp_Integer3 sizes = self.thisptr.get().shape()
+        return Integer3_from_Cpp_Integer3(address(sizes))
 
     def bind_to(self, m):
         self.thisptr.get().bind_to(deref(Cpp_Model_from_Model(m)))

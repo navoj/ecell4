@@ -140,7 +140,7 @@ def plot_movie(
 
 def plot_world(
         world, radius=None, width=500, height=500, config={}, grid=True,
-        wireframe=False, species_list=None, debug=None, max_count=1000,
+        save_image=False, wireframe=False, species_list=None, debug=None, max_count=1000,
         predicator=None):
     """Generate a plot from received instance of World and show it
     on IPython notebook.
@@ -214,7 +214,8 @@ def plot_world(
             'height': height,
             'range': __get_range_of_world(world),
             'autorange': False,
-            'grid': grid
+            'grid': grid,
+            'save_image': save_image
         }
     }
 
@@ -248,7 +249,7 @@ def generate_html(keywords, tmpl_path):
 
 def plot_trajectory(
         obs, width=500, height=500, config={}, grid=True, wireframe=False,
-        max_count=10):
+        max_count=10, save_image=False):
     """Generate a plot from received instance of TrajectoryObserver and show it
     on IPython notebook.
 
@@ -322,7 +323,8 @@ def plot_trajectory(
             'height': height,
             'range': {'x': rangex, 'y': rangey, 'z': rangez},
             'autorange': False,
-            'grid': grid
+            'grid': grid,
+            'save_image': save_image
         }
     }
 
@@ -486,7 +488,7 @@ def plot_number_observer(*args, **kwargs):
         ax.set_xlim(kwargs["xlim"])
     if "ylim" in kwargs.keys():
         ax.set_ylim(kwargs["ylim"])
-    # plt.show()
+    plt.show()
 
 
 class ColorScale:

@@ -26,9 +26,9 @@ class LatticeSpace
 {
 public:
 
-    typedef MolecularTypeBase::particle_info particle_info_type;
-    typedef MolecularTypeBase::private_coordinate_type private_coordinate_type;
-    typedef private_coordinate_type coordinate_type;
+    typedef MolecularTypeBase::coord_id_pair particle_info_type;
+    typedef MolecularTypeBase::coordinate_type coordinate_type;
+    typedef MolecularTypeBase::coordinate_type private_coordinate_type;
 
 public:
 
@@ -264,6 +264,11 @@ public:
     inline Integer size() const
     {
         return col_size() * row_size() * layer_size();
+    }
+
+    inline Integer3 shape() const
+    {
+        return Integer3(col_size(), row_size(), layer_size());
     }
 
 protected:
@@ -671,7 +676,8 @@ protected:
     private_coordinate_type get_coord(const ParticleID& pid) const;
     const Particle particle_at_private(private_coordinate_type coord) const;
 
-    bool make_structure_type(const Species& sp, const std::string loc);
+    bool make_structure_type(const Species& sp,
+            const boost::shared_ptr<const Shape>& shape, const std::string loc);
     Integer count_voxels(const boost::shared_ptr<MolecularType>& mt) const;
 
 protected:

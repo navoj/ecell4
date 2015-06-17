@@ -226,7 +226,9 @@ bool LatticeWorld::add_molecules(const Species& sp, const Integer& num)
         throw std::invalid_argument("The number of molecules must be positive.");
     }
 
+    std::cerr << "[DEBUG]" << std::endl; // DEBUG
     const LatticeWorld::molecule_info_type info(get_molecule_info(sp));
+    std::cerr << "  info.D = " << info.D << std::endl; // DEBUG
 
     Integer count(0);
     while (count < num)
@@ -293,31 +295,31 @@ Integer LatticeWorld::add_structure(
 
 Integer LatticeWorld::add_structure3(const Species& sp, const boost::shared_ptr<const Shape> shape)
 {
-    Real3 l, u;
-    shape->bounding_box(edge_lengths(), l, u);
-    const Real sigma(voxel_radius() * 2);
-    const unsigned int ndim(3);
-    for (unsigned int i(0); i != ndim; ++i)
-    {
-        l[i] = std::max(0.0, l[i] - sigma);
-        u[i] = std::min(edge_lengths()[i], u[i] + sigma);
-    }
-    const Integer3 lower(position2global(l)), upper(position2global(u));
+    // Real3 l, u;
+    // shape->bounding_box(edge_lengths(), l, u);
+    // const Real sigma(voxel_radius() * 2);
+    // const unsigned int ndim(3);
+    // for (unsigned int i(0); i != ndim; ++i)
+    // {
+    //     l[i] = std::max(0.0, l[i] - sigma);
+    //     u[i] = std::min(edge_lengths()[i], u[i] + sigma);
+    // }
+    // const Integer3 lower(position2global(l)), upper(position2global(u));
 
     const LatticeWorld::molecule_info_type info(get_molecule_info(sp));
     Integer count(0);
-    // for (Integer col(0); col < col_size(); ++col)
-    // {
-    //     for (Integer row(0); row < row_size(); ++row)
-    //     {
-    //         for (Integer layer(0); layer < layer_size(); ++layer)
-    //         {
-    for (Integer col(lower[0]); col < upper[0]; ++col)
+    for (Integer col(0); col < col_size(); ++col)
     {
-        for (Integer row(lower[1]); row < upper[1]; ++row)
+        for (Integer row(0); row < row_size(); ++row)
         {
-            for (Integer layer(lower[2]); layer < upper[2]; ++layer)
+            for (Integer layer(0); layer < layer_size(); ++layer)
             {
+    // for (Integer col(lower[0]); col < upper[0]; ++col)
+    // {
+    //     for (Integer row(lower[1]); row < upper[1]; ++row)
+    //     {
+    //         for (Integer layer(lower[2]); layer < upper[2]; ++layer)
+    //         {
                 const Integer3 g(col, row, layer);
                 const Real L(shape->is_inside(global2position(g)));
                 if (L > 0)
@@ -356,31 +358,31 @@ Integer LatticeWorld::add_structure2(const Species& sp, const boost::shared_ptr<
     // }
     // fout.close();
 
-    Real3 l, u;
-    shape->bounding_box(edge_lengths(), l, u);
-    const Real sigma(voxel_radius() * 2);
-    const unsigned int ndim(3);
-    for (unsigned int i(0); i != ndim; ++i)
-    {
-        l[i] = std::max(0.0, l[i] - sigma);
-        u[i] = std::min(edge_lengths()[i], u[i] + sigma);
-    }
-    const Integer3 lower(position2global(l)), upper(position2global(u));
+    // Real3 l, u;
+    // shape->bounding_box(edge_lengths(), l, u);
+    // const Real sigma(voxel_radius() * 2);
+    // const unsigned int ndim(3);
+    // for (unsigned int i(0); i != ndim; ++i)
+    // {
+    //     l[i] = std::max(0.0, l[i] - sigma);
+    //     u[i] = std::min(edge_lengths()[i], u[i] + sigma);
+    // }
+    // const Integer3 lower(position2global(l)), upper(position2global(u));
 
     const LatticeWorld::molecule_info_type info(get_molecule_info(sp));
     Integer count(0);
-    // for (Integer col(0); col < col_size(); ++col)
-    // {
-    //     for (Integer row(0); row < row_size(); ++row)
-    //     {
-    //         for (Integer layer(0); layer < layer_size(); ++layer)
-    //         {
-    for (Integer col(lower[0]); col < upper[0]; ++col)
+    for (Integer col(0); col < col_size(); ++col)
     {
-        for (Integer row(lower[1]); row < upper[1]; ++row)
+        for (Integer row(0); row < row_size(); ++row)
         {
-            for (Integer layer(lower[2]); layer < upper[2]; ++layer)
+            for (Integer layer(0); layer < layer_size(); ++layer)
             {
+    // for (Integer col(lower[0]); col < upper[0]; ++col)
+    // {
+    //     for (Integer row(lower[1]); row < upper[1]; ++row)
+    //     {
+    //         for (Integer layer(lower[2]); layer < upper[2]; ++layer)
+    //         {
                 const Integer3 g(col, row, layer);
                 if (!is_surface_voxel(g, shape))
                 {
@@ -403,7 +405,7 @@ bool LatticeWorld::is_surface_voxel(
     const Integer3& g, const boost::shared_ptr<const Shape> shape) const
 {
     const Real L(shape->is_inside(global2position(g)));
-    if (L < 0 || L >= 2 * voxel_radius())
+    if (L > 0 || L < -2 * voxel_radius())
     {
         return false;
     }
@@ -413,7 +415,7 @@ bool LatticeWorld::is_surface_voxel(
     for (Integer i(0); i < 12; ++i)
     {
         if (shape->is_inside(global2position((*space_).private_coord2global(
-            (*space_).get_neighbor(private_coord, i)))) < 0)
+            (*space_).get_neighbor(private_coord, i)))) > 0)
         {
             return true;
         }
